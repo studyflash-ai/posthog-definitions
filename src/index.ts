@@ -23,6 +23,13 @@ export type {
 export { cohort } from "./resources/cohort/index.js";
 export type { Cohort, CohortFilters, CohortType } from "./resources/cohort/index.js";
 
+export { batchExport } from "./resources/batch-export/index.js";
+export type {
+  BatchExport,
+  BatchExportDestination,
+  BatchExportInterval,
+  BatchExportModel,
+} from "./resources/batch-export/index.js";
 export { action } from "./resources/action/index.js";
 export type {
   Action,
