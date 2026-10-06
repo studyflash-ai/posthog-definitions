@@ -23,6 +23,12 @@ inverseOperationIds:
   - feature_flags_partial_update
   - feature_flags_destroy
 
+  - batch_exports_list
+  - batch_exports_create
+  - batch_exports_retrieve
+  - batch_exports_partial_update
+  - batch_exports_destroy
+
   - environments_endpoints_list
   - environments_endpoints_create
   - environments_endpoints_retrieve
