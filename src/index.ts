@@ -31,6 +31,15 @@ export type {
   ActionStepProperty,
 } from "./resources/action/index.js";
 
+export { batchExport } from "./resources/batch-export/index.js";
+export type {
+  BatchExport,
+  BatchExportDestination,
+  BatchExportDestinationType,
+  BatchExportInterval,
+  BatchExportModel,
+} from "./resources/batch-export/index.js";
+
 export { featureFlag } from "./resources/feature-flag/index.js";
 export type {
   FeatureFlag,
