@@ -1,6 +1,7 @@
 import type { ResourceModule } from "./types.js";
 import { topoOrder } from "./order.js";
 import { actionResource } from "./action/index.js";
+import { batchExportResource } from "./batch-export/index.js";
 import { cohortResource } from "./cohort/index.js";
 import { dashboardResource } from "./dashboard/index.js";
 import { endpointResource } from "./endpoint/index.js";
@@ -20,6 +21,7 @@ import { propertyGroupResource } from "./property-group/index.js";
  */
 const REGISTRY: ReadonlyArray<ResourceModule<unknown, unknown>> = [
   actionResource as ResourceModule<unknown, unknown>,
+  batchExportResource as ResourceModule<unknown, unknown>,
   cohortResource as ResourceModule<unknown, unknown>,
   dashboardResource as ResourceModule<unknown, unknown>,
   endpointResource as ResourceModule<unknown, unknown>,
@@ -44,6 +46,7 @@ export const RESOURCES: ReadonlyArray<ResourceModule<unknown, unknown>> = topoOr
 export { insightResource } from "./insight/index.js";
 export { dashboardResource } from "./dashboard/index.js";
 export { actionResource } from "./action/index.js";
+export { batchExportResource } from "./batch-export/index.js";
 export { cohortResource } from "./cohort/index.js";
 export { featureFlagResource } from "./feature-flag/index.js";
 export { endpointResource } from "./endpoint/index.js";
