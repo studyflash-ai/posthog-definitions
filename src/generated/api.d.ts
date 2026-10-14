@@ -574,6 +574,38 @@ export interface paths {
         patch: operations["feature_flags_partial_update"];
         trace?: never;
     };
+    "/api/projects/{project_id}/hog_functions/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["hog_functions_list"];
+        put?: never;
+        post: operations["hog_functions_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/projects/{project_id}/hog_functions/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["hog_functions_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["hog_functions_partial_update"];
+        trace?: never;
+    };
     "/api/projects/{project_id}/insights/": {
         parameters: {
             query?: never;
@@ -1396,7 +1428,10 @@ export interface components {
             properties?: components["schemas"]["ActionStepPropertyFilter"][] | null;
             /** @description CSS selector to match the target element (e.g. 'div > button.cta'). */
             selector?: string | null;
+            /** @description Compiled regex the selector matches against the event elements chain. Null when no selector is set. */
             readonly selector_regex: string | null;
+            /** @description Set when the selector compiles to a matcher that cannot match any event. Null when the selector is valid or absent. */
+            readonly selector_warning: string | null;
             /** @description HTML tag name to match (e.g. "button", "a", "input"). */
             tag_name?: string | null;
             /** @description Element text content to match. */
@@ -1963,6 +1998,362 @@ export interface components {
          */
         AzureBlobDestinationRequestTypeEnum: "AzureBlob";
         /**
+         * BIAggregation
+         * @enum {string}
+         */
+        BIAggregation: "count" | "count_distinct" | "sum" | "average" | "minimum" | "maximum" | "custom";
+        /** BICategoryGroup */
+        BICategoryGroup: {
+            /** Name */
+            name: string;
+            /** Values */
+            values: string[];
+        };
+        /** BIConditionGroup */
+        BIConditionGroup: {
+            /** Filters */
+            filters: string[];
+            /** Groups */
+            groups: components["schemas"]["BIConditionGroup"][];
+            operator: components["schemas"]["Operator1"];
+        };
+        /** BIConfig */
+        BIConfig: {
+            chartType: components["schemas"]["ChartDisplayType"];
+            /**
+             * Colorby
+             * @default null
+             */
+            colorBy: string | null;
+            /** Columns */
+            columns: components["schemas"]["BIField"][];
+            /** @default null */
+            compareFilter: components["schemas"]["CompareFilter"] | null;
+            /**
+             * @description Explore only the comparison window, using dateRange as its reference window.
+             * @default null
+             */
+            comparisonPeriod: components["schemas"]["ComparisonPeriod"] | null;
+            /**
+             * @description Column that receives the worksheet and dashboard date range.
+             * @default null
+             */
+            dateField: components["schemas"]["BIField"] | null;
+            /** @default null */
+            dateRange: components["schemas"]["DateRange"] | null;
+            /** Filters */
+            filters: components["schemas"]["BIFilter"][];
+            /**
+             * Hierarchies
+             * @description Named dimension sequences saved with the worksheet; imports are independent copies.
+             * @default null
+             */
+            hierarchies: components["schemas"]["BIHierarchy"][] | null;
+            limit: components["schemas"]["BIQueryLimit"];
+            /**
+             * Localfields
+             * @description Reusable expressions owned by this worksheet only.
+             * @default null
+             */
+            localFields: components["schemas"]["BIField"][] | null;
+            /**
+             * @description Fill missing date buckets before table calculations. Unset preserves observed points only.
+             * @default null
+             */
+            missingDates: components["schemas"]["MissingDates"] | null;
+            /** @default null */
+            resultFilterGroup: components["schemas"]["BIConditionGroup"] | null;
+            /**
+             * Resultfilters
+             * @default null
+             */
+            resultFilters: components["schemas"]["BIResultFilter"][] | null;
+            /** @default null */
+            rowFilterGroup: components["schemas"]["BIConditionGroup"] | null;
+            /** Rows */
+            rows: components["schemas"]["BIField"][];
+            /**
+             * @description null sorts automatically: newest date or highest value first, so top rows survive the LIMIT.
+             * @default null
+             */
+            sort: components["schemas"]["BISort"] | null;
+            /** @default null */
+            source: components["schemas"]["BIDataSource"] | null;
+            /** @default null */
+            topN: components["schemas"]["BITopN"] | null;
+            /** @default null */
+            totals: components["schemas"]["BITotals"] | null;
+            /** Values */
+            values: components["schemas"]["BIValue"][];
+        };
+        /** BIDataSource */
+        BIDataSource: {
+            /**
+             * Connectionid
+             * @default null
+             */
+            connectionId: string | null;
+            /** Table */
+            table: string;
+        };
+        /**
+         * BIDateBucket
+         * @enum {string}
+         */
+        BIDateBucket: "minute" | "hour" | "day" | "week" | "month" | "quarter" | "year";
+        /** BIField */
+        BIField: {
+            /** @default null */
+            dateBucket: components["schemas"]["BIDateBucket"] | null;
+            /** @default null */
+            datePart: components["schemas"]["DatePart"] | null;
+            /** Expression */
+            expression: string;
+            /** Id */
+            id: string;
+            /**
+             * Localdefinition
+             * @default null
+             */
+            localDefinition: components["schemas"]["BILocalFieldDefinition1"] | components["schemas"]["BILocalFieldDefinition2"] | components["schemas"]["BILocalFieldDefinition3"] | null;
+            /**
+             * Localfieldid
+             * @default null
+             */
+            localFieldId: string | null;
+            /** Name */
+            name: string;
+            source: components["schemas"]["BIDataSource"];
+            type: components["schemas"]["DatabaseSerializedFieldType"];
+        };
+        /** BIFilter */
+        BIFilter: {
+            /**
+             * Customexpression
+             * @default null
+             */
+            customExpression: string | null;
+            /**
+             * Enabled
+             * @default null
+             */
+            enabled: boolean | null;
+            field: components["schemas"]["BIField"];
+            operator: components["schemas"]["BIFilterOperator"];
+            /** Value */
+            value: string;
+            /**
+             * Valueto
+             * @default null
+             */
+            valueTo: string | null;
+            /**
+             * Values
+             * @default null
+             */
+            values: string[] | null;
+        };
+        /**
+         * BIFilterOperator
+         * @enum {string}
+         */
+        BIFilterOperator: "equals" | "not_equals" | "contains" | "in" | "not_in" | "between" | "greater_than" | "less_than" | "last_7_days" | "is_set" | "is_not_set" | "custom";
+        /** BIHierarchy */
+        BIHierarchy: {
+            /** Id */
+            id: string;
+            /**
+             * Levels
+             * @description Ordered from the broadest dimension to the most detailed.
+             */
+            levels: components["schemas"]["BIField"][];
+            /** Name */
+            name: string;
+        };
+        /** BILocalFieldDefinition1 */
+        BILocalFieldDefinition1: {
+            /** Aggregate */
+            aggregate: boolean;
+            /** Expression */
+            expression: string;
+            /**
+             * Kind
+             * @default expression
+             * @constant
+             */
+            kind: "expression";
+        };
+        /** BILocalFieldDefinition2 */
+        BILocalFieldDefinition2: {
+            /** Expression */
+            expression: string;
+            /** Groups */
+            groups: components["schemas"]["BICategoryGroup"][];
+            /**
+             * Kind
+             * @default groups
+             * @constant
+             */
+            kind: "groups";
+            /** Other */
+            other: string;
+        };
+        /** BILocalFieldDefinition3 */
+        BILocalFieldDefinition3: {
+            /** Expression */
+            expression: string;
+            /**
+             * Kind
+             * @default bins
+             * @constant
+             */
+            kind: "bins";
+            /** Origin */
+            origin: number;
+            /** Width */
+            width: number;
+        };
+        /**
+         * BIQueryLimit
+         * @enum {number}
+         */
+        BIQueryLimit: 100 | 1000 | 10000 | 50000;
+        /** BIResultFilter */
+        BIResultFilter: {
+            /**
+             * Enabled
+             * @default null
+             */
+            enabled: boolean | null;
+            /** Id */
+            id: string;
+            /** Measureindex */
+            measureIndex: number;
+            operator: components["schemas"]["Operator2"];
+            /** Value */
+            value: string;
+            /**
+             * Valueto
+             * @default null
+             */
+            valueTo: string | null;
+        };
+        /** BISort */
+        BISort: {
+            direction: components["schemas"]["BISortDirection"];
+            /** Key */
+            key: string;
+        };
+        /**
+         * BISortDirection
+         * @enum {string}
+         */
+        BISortDirection: "asc" | "desc";
+        /** BITableCalculation */
+        BITableCalculation: {
+            /**
+             * Computeusing
+             * @description Dimension ID to traverse. Unset chooses the date dimension; 'table' traverses all dimensions.
+             * @default null
+             */
+            computeUsing: string | null;
+            /**
+             * Requirefullwindow
+             * @description Require a complete window of non-null values before displaying a moving average.
+             * @default null
+             */
+            requireFullWindow: boolean | null;
+            type: components["schemas"]["BITableCalculationType"];
+            /**
+             * Window
+             * @description Number of points, including the current point, in a trailing moving average.
+             * @default null
+             */
+            window: number | null;
+        };
+        /**
+         * BITableCalculationType
+         * @enum {string}
+         */
+        BITableCalculationType: "percent_of_total" | "running_total" | "difference" | "percent_change" | "moving_average" | "rank";
+        /** BITopN */
+        BITopN: {
+            /** Count */
+            count: number;
+            /** Fieldid */
+            fieldId: string;
+            /** Includeother */
+            includeOther: boolean;
+            /** Measureindex */
+            measureIndex: number;
+        };
+        /** BITotals */
+        BITotals: {
+            /**
+             * Columns
+             * @default null
+             */
+            columns: boolean | null;
+            /**
+             * Rows
+             * @default null
+             */
+            rows: boolean | null;
+            /**
+             * Subtotals
+             * @default null
+             */
+            subtotals: boolean | null;
+        };
+        /** BIValue */
+        BIValue: {
+            aggregation: components["schemas"]["BIAggregation"];
+            /**
+             * Customexpression
+             * @default null
+             */
+            customExpression: string | null;
+            /** @default null */
+            display: components["schemas"]["ChartSettingsDisplay"] | null;
+            field: components["schemas"]["BIField"];
+            /** @default null */
+            formatting: components["schemas"]["ChartSettingsFormatting"] | null;
+            /**
+             * Label
+             * @default null
+             */
+            label: string | null;
+            /**
+             * @description Measures in older worksheets belong to rows.
+             * @default null
+             */
+            shelf: components["schemas"]["Shelf"] | null;
+            /** @default null */
+            tableCalculation: components["schemas"]["BITableCalculation"] | null;
+        };
+        /** BIVisualizationNode */
+        BIVisualizationNode: {
+            /** @default null */
+            chartSettings: components["schemas"]["ChartSettings"] | null;
+            config: components["schemas"]["BIConfig"];
+            /** @default null */
+            display: components["schemas"]["ChartDisplayType"] | null;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "BIVisualizationNode";
+            source: components["schemas"]["HogQLQuery"];
+            /** @default null */
+            tableSettings: components["schemas"]["TableSettings"] | null;
+            /**
+             * Version
+             * @description version of the node, used for schema migrations
+             * @default null
+             */
+            version: number | null;
+        };
+        /**
          * @description * `AED` - AED
          *     * `AFN` - AFN
          *     * `ALL` - ALL
@@ -2132,14 +2523,14 @@ export interface components {
             /** @description A human-readable name for this BatchExport. */
             name: string;
             /**
-             * @description Which model this BatchExport is exporting.
+             * @description Which data model to export: events, persons, sessions, or hogql. The hogql model exports the results of hogql_query.
              *
              *     * `events` - Events
              *     * `persons` - Persons
              *     * `sessions` - Sessions
              *     * `hogql` - Hogql
              */
-            model?: components["schemas"]["BatchExportModelEnum"] | components["schemas"]["BlankEnum"] | components["schemas"]["NullEnum"];
+            model?: components["schemas"]["BatchExportModelEnum"];
             /** @description Destination configuration (type, config, and optional integration). */
             destination: components["schemas"]["BatchExportDestination"];
             /**
@@ -2181,9 +2572,9 @@ export interface components {
             end_at?: string | null;
             /** @description The 10 most recent runs of this batch export, ordered newest first. */
             readonly latest_runs: components["schemas"]["BatchExportRun"][];
-            /** @description HogQL SELECT query. With model 'hogql', its results are the data exported by every run. The query may reference the {data_interval_start} and {data_interval_end} placeholders, replaced with each run's data interval bounds, for example: WHERE timestamp >= {data_interval_start} AND timestamp < {data_interval_end}. Without them every run exports all rows the query returns. With model 'events', it defines a custom schema of columns to export instead. Required when model is 'hogql'. */
+            /** @description HogQL SELECT query. With model 'hogql', its results are the data exported by every run. The query may reference the {data_interval_start} and {data_interval_end} placeholders, replaced with each run's data interval bounds, for example: WHERE timestamp >= {data_interval_start} AND timestamp < {data_interval_end}. Without them every run exports all rows the query returns. Required when model is 'hogql'. */
             hogql_query?: string | null;
-            /** @description HogQL modifiers to use when the query runs. Only supported when 'model' is 'hogql'. Each modifier set here overrides the project modifier with the same name, and the project modifiers apply to all others. For example, set convertToProjectTimezone to false to export timestamps in UTC instead of the project timezone. */
+            /** @description HogQL modifiers to use when the query runs, as an object keyed by modifier name, for example {"convertToProjectTimezone": true}. Only supported when 'model' is 'hogql'. Each modifier set here overrides the project modifier with the same name, and the project modifiers apply to all others. If neither sets convertToProjectTimezone, it defaults to false, so timestamps are exported in UTC. Set it to true to export timestamps in the project timezone instead. Unknown modifier names are rejected. On update, the object replaces the modifiers stored on the export, so include every modifier to keep, or send null to remove them all. */
             hogql_modifiers?: components["schemas"]["HogQLQueryModifiers"] | null;
             /** @description A schema of custom fields to select when exporting data. */
             readonly schema: unknown;
@@ -2894,9 +3285,9 @@ export interface components {
             interval: components["schemas"]["BatchExportIntervalEnum"];
             /** @description Whether the batch export is paused. */
             paused?: boolean;
-            /** @description HogQL SELECT query. With model 'hogql', its results are the data exported by every run. The query may reference the {data_interval_start} and {data_interval_end} placeholders, replaced with each run's data interval bounds, for example: WHERE timestamp >= {data_interval_start} AND timestamp < {data_interval_end}. Without them every run exports all rows the query returns. With model 'events', it defines a custom schema of columns to export instead. Required when model is 'hogql'. */
+            /** @description HogQL SELECT query. With model 'hogql', its results are the data exported by every run. The query may reference the {data_interval_start} and {data_interval_end} placeholders, replaced with each run's data interval bounds, for example: WHERE timestamp >= {data_interval_start} AND timestamp < {data_interval_end}. Without them every run exports all rows the query returns. Required when model is 'hogql'. */
             hogql_query?: string | null;
-            /** @description HogQL modifiers to use when the query runs. Only supported when 'model' is 'hogql'. Each modifier set here overrides the project modifier with the same name, and the project modifiers apply to all others. For example, set convertToProjectTimezone to false to export timestamps in UTC instead of the project timezone. */
+            /** @description HogQL modifiers to use when the query runs, as an object keyed by modifier name, for example {"convertToProjectTimezone": true}. Only supported when 'model' is 'hogql'. Each modifier set here overrides the project modifier with the same name, and the project modifiers apply to all others. If neither sets convertToProjectTimezone, it defaults to false, so timestamps are exported in UTC. Set it to true to export timestamps in the project timezone instead. Unknown modifier names are rejected. On update, the object replaces the modifiers stored on the export, so include every modifier to keep, or send null to remove them all. */
             hogql_modifiers?: components["schemas"]["HogQLQueryModifiers"] | null;
             /** @description Optional list of property filters to restrict which events are exported. Each filter is a serialized HogQL property filter object with a 'type' of one of: 'event', 'hogql', 'person' (e.g. {"key": "$browser", "operator": "exact", "type": "event", "value": ["Firefox"]}). */
             filters?: unknown;
@@ -3389,7 +3780,7 @@ export interface components {
          * BreakdownType
          * @enum {string}
          */
-        BreakdownType: "cohort" | "person" | "event" | "event_metadata" | "group" | "session" | "hogql" | "data_warehouse" | "data_warehouse_person_property" | "revenue_analytics";
+        BreakdownType: "cohort" | "person" | "event" | "event_metadata" | "element" | "group" | "session" | "hogql" | "data_warehouse" | "data_warehouse_person_property" | "revenue_analytics";
         /**
          * @description * `distinct_id` - User ID (default)
          *     * `device_id` - Device ID
@@ -3403,6 +3794,11 @@ export interface components {
          * @enum {string}
          */
         BusinessModelEnum: "b2b" | "b2c" | "other";
+        /**
+         * Calculation
+         * @enum {string}
+         */
+        Calculation: "fixed" | "mean" | "median" | "min" | "max";
         /** CalendarHeatmapFilter */
         CalendarHeatmapFilter: {
             /**
@@ -3432,7 +3828,7 @@ export interface components {
          * ChartDisplayType
          * @enum {string}
          */
-        ChartDisplayType: "Auto" | "ActionsLineGraph" | "ActionsBar" | "ActionsUnstackedBar" | "ActionsStackedBar" | "ActionsAreaGraph" | "ActionsLineGraphCumulative" | "BoldNumber" | "Metric" | "ActionsPie" | "ActionsDonut" | "ActionsBarValue" | "ActionsTable" | "WorldMap" | "CalendarHeatmap" | "TwoDimensionalHeatmap" | "BoxPlot" | "SlopeGraph" | "ScatterPlot";
+        ChartDisplayType: "Auto" | "ActionsLineGraph" | "ActionsBar" | "ActionsUnstackedBar" | "ActionsStackedBar" | "ActionsAreaGraph" | "ActionsLineGraphCumulative" | "BoldNumber" | "Metric" | "ActionsPie" | "ActionsDonut" | "ActionsProportionBar" | "ActionsBarValue" | "ActionsTable" | "WorldMap" | "CalendarHeatmap" | "TwoDimensionalHeatmap" | "BoxPlot" | "SlopeGraph" | "ScatterPlot";
         /** ChartSettings */
         ChartSettings: {
             /** @default null */
@@ -3452,7 +3848,7 @@ export interface components {
             /** @default null */
             leftYAxisSettings: components["schemas"]["YAxisSettings"] | null;
             /**
-             * @description Where the legend sits relative to the chart. Unset falls back per chart type: right for pie, top for the rest.
+             * @description Where the legend sits relative to the chart. Unset falls back per chart type: right for pie and donut, bottom for proportion bar, top for the rest.
              * @default null
              */
             legendPosition: components["schemas"]["LegendPosition"] | null;
@@ -3660,6 +4056,7 @@ export interface components {
             _create_in_folder?: string;
             /**
              * create static person ids
+             * @description Person UUIDs to add to a new static cohort.
              * @default []
              */
             _create_static_person_ids: string[];
@@ -3863,6 +4260,11 @@ export interface components {
              */
             compare_to: string | null;
         };
+        /**
+         * ComparisonPeriod
+         * @enum {unknown}
+         */
+        ComparisonPeriod: "previous" | null;
         /**
          * @description * `brotli` - brotli
          *     * `gzip` - gzip
@@ -4353,7 +4755,7 @@ export interface components {
             readonly created_at: string;
             readonly created_by: components["schemas"]["UserBasic"];
             /** Format: date-time */
-            last_accessed_at?: string | null;
+            readonly last_accessed_at: string | null;
             /** Format: date-time */
             readonly last_viewed_at: string | null;
             /** @description Path of the project-tree folder this dashboard is filed under in the file system, e.g. 'Unfiled/Dashboards'. An empty string means the project root; null means the dashboard has no file system entry. The dashboard's own name is not part of the path. */
@@ -4379,6 +4781,12 @@ export interface components {
             /** @description ID of the color theme used for chart visualizations. */
             data_color_theme_id?: number | null;
             tags?: unknown[];
+            /**
+             * @description Only restriction level 21 is accepted on create and update. Legacy value 37 is deprecated and rejected.
+             *
+             *     * `21` - Everyone in the project can edit
+             *     * `37` - Only those invited to this dashboard can edit
+             */
             restriction_level?: components["schemas"]["RestrictionLevelEnum"];
             readonly effective_restriction_level: components["schemas"]["RestrictionLevelEnum"];
             readonly effective_privilege_level: components["schemas"]["PrivilegeLevelEnum"];
@@ -4416,6 +4824,10 @@ export interface components {
              *     * `stable` - stable
              */
             layout_compaction?: components["schemas"]["LayoutCompactionEnum"];
+            /** @description Titles for tile groups, keyed by the tiles' group_key. The dashboard shows a title above its group. A write replaces the whole map. Send an empty object or null to remove all group titles. */
+            group_titles?: {
+                [key: string]: string;
+            } | null;
             readonly tiles: {
                 [key: string]: unknown;
             }[] | null;
@@ -4461,7 +4873,7 @@ export interface components {
             readonly creation_mode: components["schemas"]["DashboardCreationModeEnum"];
             tags?: unknown[];
             /**
-             * @description Controls who can edit the dashboard.
+             * @description Only restriction level 21 is accepted on create and update. Legacy value 37 is deprecated and rejected.
              *
              *     * `21` - Everyone in the project can edit
              *     * `37` - Only those invited to this dashboard can edit
@@ -4505,11 +4917,20 @@ export interface components {
              *     * `stable` - stable
              */
             layout_compaction?: components["schemas"]["LayoutCompactionEnum"];
+            /** @description Titles for tile groups, keyed by the tiles' group_key. The dashboard shows a title above its group. A write replaces the whole map. Send an empty object or null to remove all group titles. */
+            group_titles?: {
+                [key: string]: string;
+            };
         };
         /** DashboardFilter */
         DashboardFilter: {
             /** @default null */
             breakdown_filter: components["schemas"]["BreakdownFilter"] | null;
+            /**
+             * @description Period comparison forced onto every insight that supports one. Absent/null = inherit.
+             * @default null
+             */
+            compareFilter: components["schemas"]["CompareFilter"] | null;
             /**
              * Date From
              * @default null
@@ -4537,6 +4958,12 @@ export interface components {
              */
             interval: components["schemas"]["IntervalType"] | null;
             /**
+             * Metricfilters
+             * @description Metric label matchers ANDed into every metrics tile. Other tiles ignore them.
+             * @default null
+             */
+            metricFilters: components["schemas"]["MetricsQueryFilter"][] | null;
+            /**
              * Properties
              * @default null
              */
@@ -4562,6 +4989,17 @@ export interface components {
             id?: number;
             /** @description Grid position and size per breakpoint. Works for every tile type, including insight tiles. A write replaces the tile's whole layout, so send a complete sm box rather than the one value you want to change. Boxes are stored as sent and overlaps are not resolved, so send sm boxes that do not overlap, and include every tile you move in the same request. */
             layouts?: components["schemas"]["_DashboardPatchTileLayoutsOpenApi"];
+            /** @description Whether to show the tile's description underneath its title on the dashboard. Works for every tile type. The description itself is unaffected and still comes from the tile's insight, text, or widget content — this only toggles whether it renders on the dashboard. */
+            show_description?: boolean;
+            /** @description Key that puts this tile in a group with the other tiles that have the same key on this dashboard. Set the group's title in the dashboard's group_titles. Null or an empty string removes the tile from its group. */
+            group_key?: string | null;
+            /**
+             * @description Badge on the tile. winner shows a crown in the top left corner, for example to mark the best tile in a group. cheeky-hog shows a hedgehog when a person hovers over the tile. Null removes the badge. More than one tile in a group can have the winner badge.
+             *
+             *     * `winner` - Winner
+             *     * `cheeky-hog` - Cheeky hog
+             */
+            badge?: components["schemas"]["DashboardTileBadgeEnum"] | components["schemas"]["NullEnum"];
             /** @description Nested widget row updates. */
             widget?: components["schemas"]["DashboardPatchWidgetOpenApi"];
         };
@@ -4575,6 +5013,7 @@ export interface components {
              * @description Widget type identifier (cannot be changed on update).
              *
              *     * `activity_events_list` - activity_events_list
+             *     * `canvas_app` - canvas_app
              *     * `conversations_recent_tickets` - conversations_recent_tickets
              *     * `error_tracking_list` - error_tracking_list
              *     * `experiment_results` - experiment_results
@@ -4594,6 +5033,7 @@ export interface components {
         };
         /**
          * @description * `activity_events_list` - activity_events_list
+         *     * `canvas_app` - canvas_app
          *     * `conversations_recent_tickets` - conversations_recent_tickets
          *     * `error_tracking_list` - error_tracking_list
          *     * `experiment_results` - experiment_results
@@ -4604,13 +5044,112 @@ export interface components {
          *     * `survey_results` - survey_results
          * @enum {string}
          */
-        DashboardPatchWidgetOpenApiWidgetTypeEnum: "activity_events_list" | "conversations_recent_tickets" | "error_tracking_list" | "experiment_results" | "experiments_list" | "logs_list" | "notebook_widget" | "session_replay_list" | "survey_results";
+        DashboardPatchWidgetOpenApiWidgetTypeEnum: "activity_events_list" | "canvas_app" | "conversations_recent_tickets" | "error_tracking_list" | "experiment_results" | "experiments_list" | "logs_list" | "notebook_widget" | "session_replay_list" | "survey_results";
+        /**
+         * @description * `winner` - Winner
+         *     * `cheeky-hog` - Cheeky hog
+         * @enum {string}
+         */
+        DashboardTileBadgeEnum: "winner" | "cheeky-hog";
         DashboardTileBasic: {
             readonly id: number;
             readonly dashboard_id: number;
             deleted?: boolean | null;
         };
-        DashboardWidgetConfig: components["schemas"]["NotebookWidgetConfig"] | components["schemas"]["ActivityEventsListWidgetConfig"] | components["schemas"]["ErrorTrackingListWidgetConfig"] | components["schemas"]["SessionReplayListWidgetConfig"] | components["schemas"]["ExperimentsListWidgetConfig"] | components["schemas"]["ExperimentResultsWidgetConfig"] | components["schemas"]["SurveyResultsWidgetConfig"] | components["schemas"]["LogsListWidgetConfig"] | components["schemas"]["ConversationsRecentTicketsWidgetConfig"];
+        DashboardWidgetConfig: components["schemas"]["NotebookWidgetConfig"] | components["schemas"]["ActivityEventsListWidgetConfig"] | components["schemas"]["ErrorTrackingListWidgetConfig"] | components["schemas"]["SessionReplayListWidgetConfig"] | components["schemas"]["ExperimentsListWidgetConfig"] | components["schemas"]["ExperimentResultsWidgetConfig"] | components["schemas"]["SurveyResultsWidgetConfig"] | components["schemas"]["LogsListWidgetConfig"] | components["schemas"]["ConversationsRecentTicketsWidgetConfig"] | components["schemas"]["CanvasAppWidgetConfig"];
+        /** @description Serializer mixin that handles tags for objects. */
+        DashboardWriteOpenApi: {
+            readonly id: number;
+            name?: string | null;
+            description?: string;
+            pinned?: boolean;
+            /** Format: date-time */
+            readonly created_at: string;
+            readonly created_by: components["schemas"]["UserBasic"];
+            /** Format: date-time */
+            readonly last_accessed_at: string | null;
+            /** Format: date-time */
+            readonly last_viewed_at: string | null;
+            /** @description Path of the project-tree folder this dashboard is filed under in the file system, e.g. 'Unfiled/Dashboards'. An empty string means the project root; null means the dashboard has no file system entry. The dashboard's own name is not part of the path. */
+            readonly folder: string | null;
+            /**
+             * Format: uuid
+             * @description Id of this dashboard's file system entry, or null when it has none. Together with `file_system_path` this is everything a caller needs to move the dashboard between folders, so a list page does not have to look the entry up separately.
+             */
+            readonly file_system_id: string | null;
+            /** @description Full path of this dashboard's file system entry, e.g. 'Unfiled/Dashboards/Revenue'. Unlike `folder` this keeps the dashboard's own name as the last segment, which is what a move needs in order to compute the destination path. Null when it has no entry. */
+            readonly file_system_path: string | null;
+            readonly is_shared: boolean;
+            deleted?: boolean;
+            readonly creation_mode: components["schemas"]["DashboardCreationModeEnum"];
+            readonly filters: {
+                [key: string]: unknown;
+            };
+            readonly variables: {
+                [key: string]: unknown;
+            } | null;
+            /** @description Colors pinned to specific breakdown values across the dashboard's tiles. A list of entries, not an object keyed by breakdown value. Send an empty list to clear them. */
+            breakdown_colors?: components["schemas"]["BreakdownColorConfig"][] | null;
+            /** @description ID of the color theme used for chart visualizations. */
+            data_color_theme_id?: number | null;
+            tags?: unknown[];
+            /** @description Only restriction level 21 is accepted on create and update. Legacy value 37 is deprecated and rejected. */
+            restriction_level?: number;
+            readonly effective_restriction_level: components["schemas"]["RestrictionLevelEnum"];
+            readonly effective_privilege_level: components["schemas"]["PrivilegeLevelEnum"];
+            /** @description The effective access level the user has for this object */
+            readonly user_access_level: string | null;
+            readonly access_control_version: string;
+            /** Format: date-time */
+            last_refresh?: string | null;
+            readonly persisted_filters: {
+                [key: string]: unknown;
+            } | null;
+            readonly persisted_variables: {
+                [key: string]: unknown;
+            } | null;
+            readonly team_id: number;
+            /** @description List of quick filter IDs associated with this dashboard */
+            quick_filter_ids?: string[] | null;
+            /** @description Dashboard display settings. */
+            readonly customization: components["schemas"]["DashboardCustomization"];
+            /**
+             * @description Named tile density preset. Use tight, condensed, standard, relaxed, or wide.
+             *
+             *     * `tight` - tight
+             *     * `condensed` - condensed
+             *     * `standard` - standard
+             *     * `relaxed` - relaxed
+             *     * `wide` - wide
+             */
+            grid_spacing?: components["schemas"]["TileSpacingEnum"];
+            /**
+             * @description How tiles rearrange after a move or resize. vertical stacks tiles upward, horizontal stacks tiles to the left, and stable preserves positions while moving colliding tiles.
+             *
+             *     * `vertical` - vertical
+             *     * `horizontal` - horizontal
+             *     * `stable` - stable
+             */
+            layout_compaction?: components["schemas"]["LayoutCompactionEnum"];
+            /** @description Titles for tile groups, keyed by the tiles' group_key. The dashboard shows a title above its group. A write replaces the whole map. Send an empty object or null to remove all group titles. */
+            group_titles?: {
+                [key: string]: string;
+            } | null;
+            readonly tiles: {
+                [key: string]: unknown;
+            }[] | null;
+            /** @description Template key to create the dashboard from a predefined template. */
+            use_template?: string;
+            /** @description ID of an existing dashboard to duplicate. */
+            use_dashboard?: number | null;
+            /**
+             * @description When deleting, also delete insights that are only on this dashboard.
+             * @default false
+             */
+            delete_insights: boolean;
+            /** create in folder */
+            _create_in_folder?: string;
+        };
         /**
          * DataColorToken
          * @enum {string}
@@ -5051,6 +5590,12 @@ export interface components {
         /** DataWarehouseSyncWarning */
         DataWarehouseSyncWarning: {
             /**
+             * Data Is Current
+             * @description True when the last sync is still within the table's sync interval, so the data is current and the warning only says it will stop updating (a sync paused recently). False or absent when the data is out of date.
+             * @default null
+             */
+            data_is_current: boolean | null;
+            /**
              * Message
              * @description Human-readable warning shown to the user
              */
@@ -5089,6 +5634,11 @@ export interface components {
              */
             type: "warehouse_sync";
         };
+        /**
+         * DatabaseSerializedFieldType
+         * @enum {string}
+         */
+        DatabaseSerializedFieldType: "integer" | "float" | "decimal" | "string" | "datetime" | "date" | "boolean" | "array" | "json" | "lazy_table" | "virtual_table" | "field_traverser" | "expression" | "view" | "materialized_view" | "unknown";
         /**
          * @description Typed configuration for a Databricks batch-export destination.
          *
@@ -5143,6 +5693,11 @@ export interface components {
          * @enum {string}
          */
         DateOperatorEnum: "is_date_exact" | "is_date_before" | "is_date_after";
+        /**
+         * DatePart
+         * @enum {string}
+         */
+        DatePart: "month" | "quarter" | "day_of_week";
         /** @description Matches date/datetime values with date-specific operators. */
         DatePropertyFilter: {
             /** @description Key of the property you're filtering on. For example `email` or `$current_url`. */
@@ -5997,7 +6552,7 @@ export interface components {
          * ErrorTrackingOrderBy
          * @enum {string}
          */
-        ErrorTrackingOrderBy: "last_seen" | "first_seen" | "occurrences" | "users" | "sessions";
+        ErrorTrackingOrderBy: "last_seen" | "first_seen" | "occurrences" | "users" | "sessions" | "severity";
         /** ErrorTrackingPendingFingerprintIssueStateUpdate */
         ErrorTrackingPendingFingerprintIssueStateUpdate: {
             /**
@@ -6844,6 +7399,8 @@ export interface components {
             readonly can_freeze_exposure: boolean;
             /** @description The event exposures are actually counted on when the experiment doesn't configure a custom one — `$feature_flag_called`, or `$experiment_exposure` once the team is in the rollout and the experiment started at or after the cutoff. Resolved server-side so clients display the same event the results queries read. For a draft, this is what the experiment would resolve to if launched now. */
             readonly resolved_exposure_event: string;
+            /** @description Always null. Read the health findings from `GET /api/projects/{project_id}/experiments/{id}/health/`: problems in this experiment's configuration and its feature flag that keep it from producing trustworthy results, each with a fix. */
+            readonly health: components["schemas"]["ExperimentHealth"] | null;
             /** @description The effective access level the user has for this object */
             readonly user_access_level: string | null;
             /** @description Organizational tags for this experiment (up to 100, 255 characters each). */
@@ -6907,6 +7464,26 @@ export interface components {
              * @default null
              */
             version: number | null;
+        };
+        /**
+         * ExperimentApiBreakdownAttributionType
+         * @enum {string}
+         */
+        ExperimentApiBreakdownAttributionType: "first_touch" | "last_touch" | "step";
+        /** ExperimentApiBreakdownFilter */
+        ExperimentApiBreakdownFilter: {
+            /**
+             * Breakdown Limit
+             * @description Maximum number of breakdown values to compute results for.
+             * @default null
+             */
+            breakdown_limit: number | null;
+            /**
+             * Breakdowns
+             * @description Properties to break the metric results down by.
+             * @default null
+             */
+            breakdowns: (components["schemas"]["ExperimentApiPropertyBreakdown"] | components["schemas"]["ExperimentApiGroupBreakdown"])[] | null;
         };
         /** ExperimentApiEventSource */
         ExperimentApiEventSource: {
@@ -6997,8 +7574,40 @@ export interface components {
              */
             multiple_variant_handling: components["schemas"]["MultipleVariantHandling"] | null;
         };
+        /** ExperimentApiGroupBreakdown */
+        ExperimentApiGroupBreakdown: {
+            /** @description Which group type the property belongs to. */
+            group_type_index: components["schemas"]["GroupTypeIndex"];
+            /**
+             * Property
+             * @description Property name to break down by.
+             */
+            property: string;
+            /**
+             * Type
+             * @default group
+             * @constant
+             */
+            type: "group";
+        };
         /** ExperimentApiMetric */
         ExperimentApiMetric: {
+            /**
+             * @description For funnel metrics with breakdowns: which step the breakdown value is read from. 'all_events' is not supported for experiment funnels.
+             * @default null
+             */
+            breakdownAttributionType: components["schemas"]["ExperimentApiBreakdownAttributionType"] | null;
+            /**
+             * Breakdownattributionvalue
+             * @description When breakdownAttributionType is 'step', the 0-indexed step to attribute from.
+             * @default null
+             */
+            breakdownAttributionValue: number | null;
+            /**
+             * @description Break the metric results down by up to 3 event, person, session or group properties.
+             * @default null
+             */
+            breakdownFilter: components["schemas"]["ExperimentApiBreakdownFilter"] | null;
             /**
              * @description For retention metrics: completion event.
              * @default null
@@ -7119,6 +7728,24 @@ export interface components {
              */
             uuid: string | null;
         };
+        /** ExperimentApiPropertyBreakdown */
+        ExperimentApiPropertyBreakdown: {
+            /**
+             * Property
+             * @description Property name to break down by.
+             */
+            property: string;
+            /**
+             * @description Where the property lives. Defaults to 'event'.
+             * @default null
+             */
+            type: components["schemas"]["ExperimentApiPropertyBreakdownType"] | null;
+        };
+        /**
+         * ExperimentApiPropertyBreakdownType
+         * @enum {string}
+         */
+        ExperimentApiPropertyBreakdownType: "event" | "person" | "session";
         /** ExperimentApiRetentionStart */
         ExperimentApiRetentionStart: {
             /**
@@ -7626,6 +8253,81 @@ export interface components {
              */
             warnings: components["schemas"]["DataWarehouseSyncWarning"][] | null;
         };
+        ExperimentHealth: {
+            /** @description Problems that the health checks found in the experiment's configuration and its feature flag. Empty when every check passed. */
+            findings: components["schemas"]["ExperimentHealthFinding"][];
+        };
+        ExperimentHealthFinding: {
+            /**
+             * @description Stable identifier of the problem. Each code has one meaning across every surface that reports it.
+             *
+             *     * `flag_off_while_running` - Flag Off While Running
+             *     * `variant_shipped_while_running` - Variant Shipped While Running
+             *     * `flag_live_after_end` - Flag Live After End
+             *     * `flag_live_before_launch` - Flag Live Before Launch
+             *     * `bias_risk_multiple_excluded` - Bias Risk Multiple Excluded
+             *     * `no_metric` - No Metric
+             *     * `srm` - Sample Ratio Mismatch
+             *     * `zero_exposures` - Zero Exposures
+             *     * `forced_variant_release_condition` - Forced Variant Release Condition
+             *     * `flag_variants_mismatch` - Flag Variants Mismatch
+             */
+            code: components["schemas"]["ExperimentHealthFindingCodeEnum"];
+            /** @description The case within the code, when a code covers several, for example 'running_but_no_rollout' within 'flag_off_while_running'. Null when the code has one case. */
+            subcode: string | null;
+            /**
+             * @description How much the problem affects the results: critical, warning, or info.
+             *
+             *     * `critical` - Critical severity
+             *     * `warning` - Warning severity
+             *     * `info` - Info severity
+             */
+            severity: components["schemas"]["ExperimentHealthFindingSeverityEnum"];
+            /** @description One-line summary of the problem. */
+            title: string;
+            /** @description What is wrong, what it does to the experiment, and how to fix it. */
+            detail: string;
+            /** @description The values behind the finding, such as the key of a shipped variant or the share of users exposed to multiple variants. The keys depend on the code. */
+            evidence: {
+                [key: string]: string | number | null;
+            };
+            /** @description The actions that fix the problem, in order of preference, for example 'open_feature_flag' or 'add_primary_metric'. */
+            actions: components["schemas"]["ExperimentHealthFindingActionKindEnum"][];
+            /** @description The id of the matching diagnostic in the diagnosing-experiment-health skill, for example 'A5'. Null when the skill has none. */
+            diagnostic_ref: string | null;
+        };
+        /**
+         * @description * `open_feature_flag` - Open Feature Flag
+         *     * `adjust_distribution` - Adjust Distribution
+         *     * `use_first_seen_variant` - Use First Seen Variant
+         *     * `add_primary_metric` - Add Primary Metric
+         *     * `add_secondary_metric` - Add Secondary Metric
+         *     * `edit_exposure_criteria` - Edit Exposure Criteria
+         *     * `edit_release_conditions` - Edit Release Conditions
+         * @enum {string}
+         */
+        ExperimentHealthFindingActionKindEnum: "open_feature_flag" | "adjust_distribution" | "use_first_seen_variant" | "add_primary_metric" | "add_secondary_metric" | "edit_exposure_criteria" | "edit_release_conditions";
+        /**
+         * @description * `flag_off_while_running` - Flag Off While Running
+         *     * `variant_shipped_while_running` - Variant Shipped While Running
+         *     * `flag_live_after_end` - Flag Live After End
+         *     * `flag_live_before_launch` - Flag Live Before Launch
+         *     * `bias_risk_multiple_excluded` - Bias Risk Multiple Excluded
+         *     * `no_metric` - No Metric
+         *     * `srm` - Sample Ratio Mismatch
+         *     * `zero_exposures` - Zero Exposures
+         *     * `forced_variant_release_condition` - Forced Variant Release Condition
+         *     * `flag_variants_mismatch` - Flag Variants Mismatch
+         * @enum {string}
+         */
+        ExperimentHealthFindingCodeEnum: "flag_off_while_running" | "variant_shipped_while_running" | "flag_live_after_end" | "flag_live_before_launch" | "bias_risk_multiple_excluded" | "no_metric" | "srm" | "zero_exposures" | "forced_variant_release_condition" | "flag_variants_mismatch";
+        /**
+         * @description * `critical` - Critical severity
+         *     * `warning` - Warning severity
+         *     * `info` - Info severity
+         * @enum {string}
+         */
+        ExperimentHealthFindingSeverityEnum: "critical" | "warning" | "info";
         /** @description A holdout group — a stable slice of users excluded from experiment exposure. */
         ExperimentHoldout: {
             readonly id: number;
@@ -7731,6 +8433,8 @@ export interface components {
              */
             version: number | null;
         };
+        /** ExperimentMetric */
+        ExperimentMetric: components["schemas"]["ExperimentMeanMetric"] | components["schemas"]["ExperimentFunnelMetric"] | components["schemas"]["ExperimentRatioMetric"] | components["schemas"]["ExperimentRetentionMetric"];
         /**
          * ExperimentMetricGoal
          * @enum {string}
@@ -8179,6 +8883,7 @@ export interface components {
         ExperimentStatsValidationFailure: "not-enough-exposures" | "baseline-mean-is-zero" | "not-enough-metric-data";
         /** @enum {string} */
         ExperimentStatusEnum: "draft" | "running" | "paused" | "exposure_frozen" | "stopped";
+        /** @description A shared metric's link to one experiment, as the experiment API returns it. */
         ExperimentToSavedMetric: {
             readonly id: number;
             experiment: number;
@@ -8187,6 +8892,8 @@ export interface components {
             readonly created_at: string;
             readonly query: unknown;
             readonly name: string;
+            /** @description The metric this experiment calculates for this shared metric: `query` with the per-experiment overrides from `metadata` applied (breakdowns, breakdown_limit, and funnel breakdown attribution). Results, fingerprints and queries for this metric use this definition, not `query`. Null when `query` is not an ExperimentMetric, such as a legacy shared metric (kind ExperimentTrendsQuery or ExperimentFunnelsQuery), which takes no overrides. */
+            readonly effective_query: components["schemas"]["ExperimentMetric"] | null;
         };
         /** ExperimentTrendsQuery */
         ExperimentTrendsQuery: {
@@ -8559,6 +9266,8 @@ export interface components {
             readonly can_freeze_exposure: boolean;
             /** @description The event exposures are actually counted on when the experiment doesn't configure a custom one — `$feature_flag_called`, or `$experiment_exposure` once the team is in the rollout and the experiment started at or after the cutoff. Resolved server-side so clients display the same event the results queries read. For a draft, this is what the experiment would resolve to if launched now. */
             readonly resolved_exposure_event: string;
+            /** @description Always null. Read the health findings from `GET /api/projects/{project_id}/experiments/{id}/health/`: problems in this experiment's configuration and its feature flag that keep it from producing trustworthy results, each with a fix. */
+            readonly health: components["schemas"]["ExperimentHealth"] | null;
             /** @description The effective access level the user has for this object */
             readonly user_access_level: string | null;
             /** @description Organizational tags for this experiment (up to 100, 255 characters each). */
@@ -8597,7 +9306,7 @@ export interface components {
             readonly can_edit: boolean;
             tags?: unknown[];
             evaluation_contexts?: unknown[];
-            /** @description Legacy dashboard of saved usage insights for this flag, or null if it has none. New flags show usage charts inline instead. The dashboard creation endpoint is deprecated and will be removed after September 25, 2026. */
+            /** @description Legacy dashboard of saved usage insights for this flag, or null if it has none. Usage charts are on the flag's Usage tab. The API does not create these dashboards. */
             readonly usage_dashboard: number | null;
             analytics_dashboards?: number[];
             has_enriched_analytics?: boolean | null;
@@ -9921,6 +10630,11 @@ export interface components {
              */
             borderColor: string | null;
             /**
+             * @description Recalculate from returned chart marks. An absent calculation uses the fixed value.
+             * @default null
+             */
+            calculation: components["schemas"]["Calculation"] | null;
+            /**
              * Displayifcrossed
              * @default null
              */
@@ -9934,6 +10648,11 @@ export interface components {
             label: string;
             /** @default null */
             position: components["schemas"]["Position"] | null;
+            /**
+             * @description SQL chart calculations use the primary axis, across all series or separately per series.
+             * @default null
+             */
+            scope: components["schemas"]["Scope"] | null;
             /** Value */
             value: number;
         };
@@ -10076,6 +10795,11 @@ export interface components {
              */
             value: (string | number | boolean)[] | string | number | boolean | null;
         };
+        /**
+         * GroupTypeIndex
+         * @enum {number}
+         */
+        GroupTypeIndex: 0 | 1 | 2 | 3 | 4;
         /** GroupsQuery */
         GroupsQuery: {
             /** Group Type Index */
@@ -10273,6 +10997,222 @@ export interface components {
          * @enum {string}
          */
         HeatmapSortOrder: "asc" | "desc";
+        HogFunction: {
+            /** Format: uuid */
+            readonly id: string;
+            /**
+             * @description Function type: destination, site_destination, internal_destination, source_webhook, warehouse_source_webhook, site_app, transformation, or transformation_log.
+             *
+             *     * `destination` - Destination
+             *     * `site_destination` - Site Destination
+             *     * `internal_destination` - Internal Destination
+             *     * `source_webhook` - Source Webhook
+             *     * `warehouse_source_webhook` - Warehouse Source Webhook
+             *     * `site_app` - Site App
+             *     * `transformation` - Transformation
+             *     * `transformation_log` - Transformation Log
+             *     * `legacy_destination` - Legacy Destination
+             */
+            type?: components["schemas"]["HogFunctionTypeEnum"] | components["schemas"]["NullEnum"];
+            /** @description Display name for the function. */
+            name?: string | null;
+            /** @description Human-readable description of what this function does. */
+            description?: string;
+            /** Format: date-time */
+            readonly created_at: string;
+            readonly created_by: components["schemas"]["UserBasic"];
+            /** Format: date-time */
+            readonly updated_at: string;
+            /** @description Whether the function is active and processing events. */
+            enabled?: boolean;
+            /** @description Soft-delete flag. Set to true to archive the function. */
+            deleted?: boolean;
+            /** @description Source code. Hog language for most types; TypeScript for site_destination and site_app. */
+            hog?: string;
+            readonly bytecode: unknown;
+            readonly transpiled: string | null;
+            /** @description Schema defining the configurable input parameters for this function. */
+            inputs_schema?: components["schemas"]["InputsSchemaItem"][];
+            /** @description Values for each input defined in inputs_schema. */
+            inputs?: {
+                [key: string]: components["schemas"]["InputsItem"];
+            };
+            /** @description Event filters that control which events trigger this function. */
+            filters?: components["schemas"]["HogFunctionFilters"];
+            /** @description PII masking configuration with TTL, threshold, and hash expression. */
+            masking?: components["schemas"]["HogFunctionMasking"] | null;
+            /** @description Event-to-destination field mappings. Only for destination and site_destination types. */
+            mappings?: components["schemas"]["Mappings"][] | null;
+            /** @description URL for the function's icon displayed in the UI. */
+            icon_url?: string | null;
+            readonly template: components["schemas"]["HogFunctionTemplate"];
+            /** @description ID of the template to create this function from. */
+            template_id?: string | null;
+            readonly status: components["schemas"]["HogFunctionStatus"] | null;
+            /** @description Execution priority for transformations. Lower values run first. */
+            execution_order?: number | null;
+            /** create in folder */
+            _create_in_folder?: string;
+            /** Format: uuid */
+            readonly batch_export_id: string | null;
+            /** @description How this row matched the `search` query parameter: `exact` (the term is a case-insensitive substring of a searched field) or `similar` (a fuzzy trigram match, returned only when no exact match exists). Null when the list is not filtered by `search`. */
+            readonly search_match_type: components["schemas"]["SearchMatchTypeEnum"] | components["schemas"]["NullEnum"];
+            /** @description Incremented every time the live config changes. See the revisions endpoint. */
+            readonly version: number;
+            /** @description Config staged for review but not live yet: a full snapshot of hog, inputs_schema, inputs, filters, mappings and masking. Null when nothing is staged. Publish or discard it to clear. */
+            readonly draft: unknown;
+            /**
+             * Format: date-time
+             * @description When config was last staged for review, or null when nothing is staged.
+             */
+            readonly draft_updated_at: string | null;
+            /**
+             * Format: date-time
+             * @description Optimistic concurrency: the updated_at (or draft_updated_at when editing a staged draft) you last read. If the stored side is newer, the write fails with 409 instead of overwriting the concurrent edit. Omit to overwrite unconditionally.
+             */
+            base_updated_at?: string;
+        };
+        HogFunctionFilters: {
+            /** @default events */
+            source: components["schemas"]["HogFunctionFiltersSourceEnum"];
+            actions?: {
+                [key: string]: unknown;
+            }[];
+            events?: {
+                [key: string]: unknown;
+            }[];
+            data_warehouse?: {
+                [key: string]: unknown;
+            }[];
+            properties?: {
+                [key: string]: unknown;
+            }[];
+            filter_test_accounts?: boolean;
+            bytecode_error?: string;
+            bytecode_contract?: string;
+        };
+        /**
+         * @description * `events` - events
+         *     * `internal-events` - internal-events
+         *     * `person-updates` - person-updates
+         *     * `data-warehouse-table` - data-warehouse-table
+         *     * `data-warehouse-view` - data-warehouse-view
+         * @enum {string}
+         */
+        HogFunctionFiltersSourceEnum: "events" | "internal-events" | "person-updates" | "data-warehouse-table" | "data-warehouse-view";
+        HogFunctionMappingTemplate: {
+            /** @description Name of this mapping template. */
+            name: string;
+            /** @description Whether this mapping is enabled by default. */
+            include_by_default?: boolean | null;
+            /** @description Whether this mapping should match all events by default, hiding the event filter UI. */
+            use_all_events_by_default?: boolean | null;
+            /** @description Event filters specific to this mapping. */
+            filters?: unknown;
+            /** @description Input values specific to this mapping. */
+            inputs?: unknown;
+            /** @description Additional input schema fields specific to this mapping. */
+            inputs_schema?: unknown;
+        };
+        HogFunctionMasking: {
+            /** @description Time-to-live in seconds for the masking cache (60–86400). */
+            ttl: number;
+            /** @description Optional threshold count before masking applies. */
+            threshold?: number | null;
+            /** @description Hog expression used to compute the masking hash. */
+            hash: string;
+            /** @description Compiled bytecode for the hash expression. Auto-generated. */
+            bytecode?: unknown;
+        };
+        HogFunctionMinimal: {
+            /** Format: uuid */
+            readonly id: string;
+            readonly type: string | null;
+            readonly name: string | null;
+            readonly description: string;
+            /** Format: date-time */
+            readonly created_at: string;
+            readonly created_by: components["schemas"]["UserBasic"];
+            /** Format: date-time */
+            readonly updated_at: string;
+            readonly enabled: boolean;
+            readonly hog: string;
+            readonly filters: unknown;
+            readonly icon_url: string | null;
+            readonly template: components["schemas"]["HogFunctionTemplate"];
+            readonly status: components["schemas"]["HogFunctionStatus"] | null;
+            readonly execution_order: number | null;
+            /** @description How this row matched the `search` query parameter: `exact` (the term is a case-insensitive substring of a searched field) or `similar` (a fuzzy trigram match, returned only when no exact match exists). Null when the list is not filtered by `search`. */
+            readonly search_match_type: components["schemas"]["SearchMatchTypeEnum"] | components["schemas"]["NullEnum"];
+            /**
+             * Format: date-time
+             * @description When config was last staged for review, or null when nothing is staged.
+             */
+            readonly draft_updated_at: string | null;
+        };
+        HogFunctionStatus: {
+            state: components["schemas"]["HogFunctionStatusStateEnum"];
+            tokens: number;
+        };
+        /**
+         * @description * `0` - 0
+         *     * `1` - 1
+         *     * `2` - 2
+         *     * `3` - 3
+         *     * `11` - 11
+         *     * `12` - 12
+         * @enum {integer}
+         */
+        HogFunctionStatusStateEnum: 0 | 1 | 2 | 3 | 11 | 12;
+        HogFunctionTemplate: {
+            /** @description Unique template identifier (e.g. 'template-slack'). */
+            id: string;
+            /** @description Display name of the template. */
+            name: string;
+            /** @description What this template does. */
+            description?: string | null;
+            /** @description Source code of the template. */
+            code: string;
+            /** @description Programming language: 'hog' or 'javascript'. */
+            code_language?: string;
+            /** @description Schema defining configurable inputs for functions created from this template. */
+            inputs_schema: unknown;
+            /** @description Function type this template creates. */
+            type: string;
+            /** @description Lifecycle status: alpha, beta, stable, deprecated, or hidden. */
+            status?: string;
+            /** @description Category tags for organizing templates. */
+            category?: unknown;
+            /** @description Whether available on free plans. */
+            free?: boolean;
+            /** @description URL for the template's icon. */
+            icon_url?: string | null;
+            /** @description Default event filters. */
+            filters?: unknown;
+            /** @description Default PII masking configuration. */
+            masking?: unknown;
+            /** @description Pre-defined mapping configurations for destination templates. */
+            mapping_templates?: components["schemas"]["HogFunctionMappingTemplate"][] | null;
+        };
+        /**
+         * @description * `hog` - hog
+         *     * `liquid` - liquid
+         * @enum {string}
+         */
+        HogFunctionTemplatingEnum: "hog" | "liquid";
+        /**
+         * @description * `destination` - Destination
+         *     * `site_destination` - Site Destination
+         *     * `internal_destination` - Internal Destination
+         *     * `source_webhook` - Source Webhook
+         *     * `warehouse_source_webhook` - Warehouse Source Webhook
+         *     * `site_app` - Site App
+         *     * `transformation` - Transformation
+         *     * `transformation_log` - Transformation Log
+         *     * `legacy_destination` - Legacy Destination
+         * @enum {string}
+         */
+        HogFunctionTypeEnum: "destination" | "site_destination" | "internal_destination" | "source_webhook" | "warehouse_source_webhook" | "site_app" | "transformation" | "transformation_log" | "legacy_destination";
         /** HogQLFilter */
         HogQLFilter: {
             /**
@@ -10295,6 +11235,11 @@ export interface components {
              * @default null
              */
             breakdownFilter: components["schemas"]["BreakdownFilter"] | null;
+            /**
+             * @description Comparison range consumed by {filters.previous} and {filters.compareDate(expr)}.
+             * @default null
+             */
+            compareFilter: components["schemas"]["CompareFilter"] | null;
             /** @default null */
             dateRange: components["schemas"]["DateRange"] | null;
             /**
@@ -10388,6 +11333,12 @@ export interface components {
              * @default null
              */
             start: number | null;
+            /**
+             * Url
+             * @description An https page with more detail about the notice. The editor links to it from the notice's hover.
+             * @default null
+             */
+            url: string | null;
         };
         /** HogQLPropertyFilter */
         HogQLPropertyFilter: {
@@ -10834,6 +11785,61 @@ export interface components {
          * @enum {string}
          */
         InlineCohortCalculation: "off" | "auto" | "always";
+        InputsItem: {
+            templating?: components["schemas"]["HogFunctionTemplatingEnum"];
+            readonly bytecode: unknown[];
+            readonly bytecode_contract: string;
+            readonly order: number;
+            readonly transpiled: unknown;
+        };
+        InputsSchemaItem: {
+            type: components["schemas"]["InputsSchemaItemTypeEnum"];
+            key: string;
+            label?: string;
+            choices?: {
+                [key: string]: unknown;
+            }[];
+            searchable?: boolean;
+            /** @default false */
+            required: boolean;
+            /** @default false */
+            secret: boolean;
+            /** @default false */
+            hidden: boolean;
+            description?: string;
+            integration?: string;
+            integration_key?: string;
+            requires_field?: string;
+            integration_field?: string;
+            requiredScopes?: string;
+            templating?: boolean | ("hog" | "liquid");
+        };
+        /**
+         * @description * `string` - string
+         *     * `number` - number
+         *     * `boolean` - boolean
+         *     * `dictionary` - dictionary
+         *     * `choice` - choice
+         *     * `json` - json
+         *     * `integration` - integration
+         *     * `integration_multi` - integration_multi
+         *     * `integration_field` - integration_field
+         *     * `email` - email
+         *     * `native_email` - native_email
+         *     * `posthog_assignee` - posthog_assignee
+         *     * `posthog_ticket_tags` - posthog_ticket_tags
+         *     * `posthog_business_hours` - posthog_business_hours
+         *     * `non_failure_status_codes` - non_failure_status_codes
+         *     * `customer_analytics_account_properties` - customer_analytics_account_properties
+         *     * `customer_analytics_account_relationships` - customer_analytics_account_relationships
+         *     * `task_model` - task_model
+         *     * `task_repository` - task_repository
+         *     * `task_mcp_installations` - task_mcp_installations
+         *     * `signals_scout` - signals_scout
+         *     * `task_skills` - task_skills
+         * @enum {string}
+         */
+        InputsSchemaItemTypeEnum: "string" | "number" | "boolean" | "dictionary" | "choice" | "json" | "integration" | "integration_multi" | "integration_field" | "email" | "native_email" | "posthog_assignee" | "posthog_ticket_tags" | "posthog_business_hours" | "non_failure_status_codes" | "customer_analytics_account_properties" | "customer_analytics_account_relationships" | "task_model" | "task_repository" | "task_mcp_installations" | "signals_scout" | "task_skills";
         /** @description Simplified serializer to speed response times when loading large amounts of objects. */
         Insight: {
             readonly id: number;
@@ -11094,7 +12100,7 @@ export interface components {
          * IntegrationKind
          * @enum {string}
          */
-        IntegrationKind: "slack" | "salesforce" | "hubspot" | "google-pubsub" | "google-cloud-service-account" | "google-cloud-storage" | "google-ads" | "google-analytics" | "google-calendar" | "google-search-console" | "google-sheets" | "linkedin-ads" | "snapchat" | "stripe" | "intercom" | "email" | "twilio" | "linear" | "github" | "gitlab" | "helpscout" | "meta-ads" | "instagram" | "clickup" | "reddit-ads" | "databricks" | "tiktok-ads" | "bing-ads" | "vercel" | "azure-blob" | "firebase" | "jira" | "pinterest-ads" | "pardot" | "customerio-app" | "customerio-webhook" | "customerio-track" | "apns" | "postgresql" | "aws-s3" | "aws-redshift" | "s3-compatible" | "snowflake" | "youtube-analytics" | "twitter-ads";
+        IntegrationKind: "slack" | "salesforce" | "hubspot" | "google-pubsub" | "google-cloud-service-account" | "google-cloud-storage" | "google-ads" | "google-analytics" | "google-calendar" | "google-search-console" | "google-sheets" | "linkedin-ads" | "snapchat" | "stripe" | "intercom" | "email" | "twilio" | "linear" | "github" | "gitlab" | "helpscout" | "meta-ads" | "instagram" | "clickup" | "reddit-ads" | "databricks" | "tiktok-ads" | "bing-ads" | "vercel" | "azure-blob" | "firebase" | "jira" | "pinterest-ads" | "pardot" | "customerio-app" | "customerio-webhook" | "customerio-track" | "apns" | "apple-ads" | "postgresql" | "aws-s3" | "aws-redshift" | "s3-compatible" | "snowflake" | "youtube-analytics" | "twitter-ads";
         /**
          * IntervalType
          * @enum {string}
@@ -11615,6 +12621,14 @@ export interface components {
          * @enum {string}
          */
         ManualMetricType: "funnel" | "mean_count" | "mean_sum_or_avg";
+        Mappings: {
+            inputs_schema?: components["schemas"]["InputsSchemaItem"][];
+            inputs?: {
+                [key: string]: components["schemas"]["InputsItem"];
+            };
+            name?: string;
+            filters?: components["schemas"]["HogFunctionFilters"];
+        };
         /**
          * MarketingAnalyticsActionConversionGoal
          * @description A conversion goal counted from an action.
@@ -12485,6 +13499,26 @@ export interface components {
          * @enum {string}
          */
         MetricSummary: "total" | "average" | "latest";
+        /**
+         * MetricsAttributeScope
+         * @enum {string}
+         */
+        MetricsAttributeScope: "resource" | "attribute" | "auto";
+        /**
+         * MetricsFilterOp
+         * @enum {string}
+         */
+        MetricsFilterOp: "eq" | "neq" | "regex" | "not_regex";
+        /** MetricsQueryFilter */
+        MetricsQueryFilter: {
+            /** Key */
+            key: string;
+            op: components["schemas"]["MetricsFilterOp"];
+            /** @default null */
+            scope: components["schemas"]["MetricsAttributeScope"] | null;
+            /** Value */
+            value: string;
+        };
         MinimalFeatureFlag: {
             readonly id: number;
             readonly team_id: number;
@@ -12515,10 +13549,15 @@ export interface components {
             readonly evaluation_contexts: string[];
         };
         /**
+         * MissingDates
+         * @enum {string}
+         */
+        MissingDates: "gap" | "zero";
+        /**
          * MultipleBreakdownType
          * @enum {string}
          */
-        MultipleBreakdownType: "person" | "event" | "event_metadata" | "group" | "session" | "hogql" | "cohort" | "revenue_analytics" | "data_warehouse" | "data_warehouse_person_property";
+        MultipleBreakdownType: "person" | "event" | "event_metadata" | "element" | "group" | "session" | "hogql" | "cohort" | "revenue_analytics" | "data_warehouse" | "data_warehouse_person_property";
         /**
          * MultipleVariantHandling
          * @enum {string}
@@ -12593,6 +13632,16 @@ export interface components {
          * @enum {string}
          */
         NumericPropertyFilterOperatorEnum: "exact" | "is_not" | "gt" | "lt" | "gte" | "lte";
+        /**
+         * Operator1
+         * @enum {string}
+         */
+        Operator1: "AND" | "OR";
+        /**
+         * Operator2
+         * @enum {string}
+         */
+        Operator2: "equals" | "not_equals" | "greater_than" | "less_than" | "greater_than_or_equal" | "less_than_or_equal" | "between" | "is_set" | "is_not_set";
         /**
          * OrderDirection2
          * @enum {string}
@@ -12772,6 +13821,21 @@ export interface components {
             previous?: string | null;
             results: components["schemas"]["FeatureFlag"][];
         };
+        PaginatedHogFunctionMinimalList: {
+            /** @example 123 */
+            count: number;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?offset=400&limit=100
+             */
+            next?: string | null;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?offset=200&limit=100
+             */
+            previous?: string | null;
+            results: components["schemas"]["HogFunctionMinimal"][];
+        };
         PaginatedInsightList: {
             /** @example 123 */
             count: number;
@@ -12876,9 +13940,9 @@ export interface components {
             interval?: components["schemas"]["BatchExportIntervalEnum"];
             /** @description Whether the batch export is paused. */
             paused?: boolean;
-            /** @description HogQL SELECT query. With model 'hogql', its results are the data exported by every run. The query may reference the {data_interval_start} and {data_interval_end} placeholders, replaced with each run's data interval bounds, for example: WHERE timestamp >= {data_interval_start} AND timestamp < {data_interval_end}. Without them every run exports all rows the query returns. With model 'events', it defines a custom schema of columns to export instead. Required when model is 'hogql'. */
+            /** @description HogQL SELECT query. With model 'hogql', its results are the data exported by every run. The query may reference the {data_interval_start} and {data_interval_end} placeholders, replaced with each run's data interval bounds, for example: WHERE timestamp >= {data_interval_start} AND timestamp < {data_interval_end}. Without them every run exports all rows the query returns. Required when model is 'hogql'. */
             hogql_query?: string | null;
-            /** @description HogQL modifiers to use when the query runs. Only supported when 'model' is 'hogql'. Each modifier set here overrides the project modifier with the same name, and the project modifiers apply to all others. For example, set convertToProjectTimezone to false to export timestamps in UTC instead of the project timezone. */
+            /** @description HogQL modifiers to use when the query runs, as an object keyed by modifier name, for example {"convertToProjectTimezone": true}. Only supported when 'model' is 'hogql'. Each modifier set here overrides the project modifier with the same name, and the project modifiers apply to all others. If neither sets convertToProjectTimezone, it defaults to false, so timestamps are exported in UTC. Set it to true to export timestamps in the project timezone instead. Unknown modifier names are rejected. On update, the object replaces the modifiers stored on the export, so include every modifier to keep, or send null to remove them all. */
             hogql_modifiers?: components["schemas"]["HogQLQueryModifiers"] | null;
             /** @description Optional list of property filters to restrict which events are exported. Each filter is a serialized HogQL property filter object with a 'type' of one of: 'event', 'hogql', 'person' (e.g. {"key": "$browser", "operator": "exact", "type": "event", "value": ["Firefox"]}). */
             filters?: unknown;
@@ -12934,6 +13998,7 @@ export interface components {
             _create_in_folder?: string;
             /**
              * create static person ids
+             * @description Person UUIDs to add to a new static cohort.
              * @default []
              */
             _create_static_person_ids: string[];
@@ -13142,6 +14207,8 @@ export interface components {
             readonly can_freeze_exposure?: boolean;
             /** @description The event exposures are actually counted on when the experiment doesn't configure a custom one — `$feature_flag_called`, or `$experiment_exposure` once the team is in the rollout and the experiment started at or after the cutoff. Resolved server-side so clients display the same event the results queries read. For a draft, this is what the experiment would resolve to if launched now. */
             readonly resolved_exposure_event?: string;
+            /** @description Always null. Read the health findings from `GET /api/projects/{project_id}/experiments/{id}/health/`: problems in this experiment's configuration and its feature flag that keep it from producing trustworthy results, each with a fix. */
+            readonly health?: components["schemas"]["ExperimentHealth"] | null;
             /** @description The effective access level the user has for this object */
             readonly user_access_level?: string | null;
             /** @description Organizational tags for this experiment (up to 100, 255 characters each). */
@@ -13181,6 +14248,81 @@ export interface components {
              *     * `device_id` - Device ID
              */
             bucketing_identifier?: components["schemas"]["BucketingIdentifierEnum"] | components["schemas"]["NullEnum"];
+        };
+        PatchedHogFunction: {
+            /** Format: uuid */
+            readonly id?: string;
+            /**
+             * @description Function type: destination, site_destination, internal_destination, source_webhook, warehouse_source_webhook, site_app, transformation, or transformation_log.
+             *
+             *     * `destination` - Destination
+             *     * `site_destination` - Site Destination
+             *     * `internal_destination` - Internal Destination
+             *     * `source_webhook` - Source Webhook
+             *     * `warehouse_source_webhook` - Warehouse Source Webhook
+             *     * `site_app` - Site App
+             *     * `transformation` - Transformation
+             *     * `transformation_log` - Transformation Log
+             *     * `legacy_destination` - Legacy Destination
+             */
+            type?: components["schemas"]["HogFunctionTypeEnum"] | components["schemas"]["NullEnum"];
+            /** @description Display name for the function. */
+            name?: string | null;
+            /** @description Human-readable description of what this function does. */
+            description?: string;
+            /** Format: date-time */
+            readonly created_at?: string;
+            readonly created_by?: components["schemas"]["UserBasic"];
+            /** Format: date-time */
+            readonly updated_at?: string;
+            /** @description Whether the function is active and processing events. */
+            enabled?: boolean;
+            /** @description Soft-delete flag. Set to true to archive the function. */
+            deleted?: boolean;
+            /** @description Source code. Hog language for most types; TypeScript for site_destination and site_app. */
+            hog?: string;
+            readonly bytecode?: unknown;
+            readonly transpiled?: string | null;
+            /** @description Schema defining the configurable input parameters for this function. */
+            inputs_schema?: components["schemas"]["InputsSchemaItem"][];
+            /** @description Values for each input defined in inputs_schema. */
+            inputs?: {
+                [key: string]: components["schemas"]["InputsItem"];
+            };
+            /** @description Event filters that control which events trigger this function. */
+            filters?: components["schemas"]["HogFunctionFilters"];
+            /** @description PII masking configuration with TTL, threshold, and hash expression. */
+            masking?: components["schemas"]["HogFunctionMasking"] | null;
+            /** @description Event-to-destination field mappings. Only for destination and site_destination types. */
+            mappings?: components["schemas"]["Mappings"][] | null;
+            /** @description URL for the function's icon displayed in the UI. */
+            icon_url?: string | null;
+            readonly template?: components["schemas"]["HogFunctionTemplate"];
+            /** @description ID of the template to create this function from. */
+            template_id?: string | null;
+            readonly status?: components["schemas"]["HogFunctionStatus"] | null;
+            /** @description Execution priority for transformations. Lower values run first. */
+            execution_order?: number | null;
+            /** create in folder */
+            _create_in_folder?: string;
+            /** Format: uuid */
+            readonly batch_export_id?: string | null;
+            /** @description How this row matched the `search` query parameter: `exact` (the term is a case-insensitive substring of a searched field) or `similar` (a fuzzy trigram match, returned only when no exact match exists). Null when the list is not filtered by `search`. */
+            readonly search_match_type?: components["schemas"]["SearchMatchTypeEnum"] | components["schemas"]["NullEnum"];
+            /** @description Incremented every time the live config changes. See the revisions endpoint. */
+            readonly version?: number;
+            /** @description Config staged for review but not live yet: a full snapshot of hog, inputs_schema, inputs, filters, mappings and masking. Null when nothing is staged. Publish or discard it to clear. */
+            readonly draft?: unknown;
+            /**
+             * Format: date-time
+             * @description When config was last staged for review, or null when nothing is staged.
+             */
+            readonly draft_updated_at?: string | null;
+            /**
+             * Format: date-time
+             * @description Optimistic concurrency: the updated_at (or draft_updated_at when editing a staged draft) you last read. If the stored side is newer, the write fails with 409 instead of overwriting the concurrent edit. Omit to overwrite unconditionally.
+             */
+            base_updated_at?: string;
         };
         /** @description Simplified serializer to speed response times when loading large amounts of objects. */
         PatchedInsight: {
@@ -13283,13 +14425,8 @@ export interface components {
             /** @description ID of the color theme used for chart visualizations. */
             data_color_theme_id?: number | null;
             tags?: string[];
-            /**
-             * @description Who can edit this dashboard.
-             *
-             *     * `21` - Everyone in the project can edit
-             *     * `37` - Only those invited to this dashboard can edit
-             */
-            restriction_level?: components["schemas"]["RestrictionLevelEnum"];
+            /** @description Only restriction level 21 is accepted on create and update. Legacy value 37 is deprecated and rejected. */
+            restriction_level?: number;
             /** @description List of quick filter IDs associated with this dashboard. */
             quick_filter_ids?: string[] | null;
             /**
@@ -13310,6 +14447,10 @@ export interface components {
              *     * `stable` - stable
              */
             layout_compaction?: components["schemas"]["LayoutCompactionEnum"];
+            /** @description Titles for tile groups, keyed by the tiles' group_key. The dashboard shows a title above its group. A write replaces the whole map. Send an empty object or null to remove all group titles. */
+            group_titles?: {
+                [key: string]: string;
+            } | null;
             /** @description Dashboard tiles to update, each identified by its tile id. Any tile type accepts `layouts` to set its grid position and size. Widget tiles also accept nested widget.config patches. */
             tiles?: components["schemas"]["DashboardPatchTileOpenApi"][];
             /** @description Template key to create the dashboard from a predefined template. */
@@ -14012,6 +15153,8 @@ export interface components {
             week_start_day?: components["schemas"]["WeekStartDayEnum"] | components["schemas"]["NullEnum"];
             /** @description ID of the dashboard shown as the project's default landing dashboard. */
             primary_dashboard?: number | null;
+            /** @description ID of the dashboard shown on the product analytics Home tab. Null shows the built-in generic view. */
+            home_tab_dashboard?: number | null;
             live_events_columns?: string[] | null;
             /** @description Origins permitted to record session replays and heatmaps. Empty list allows all origins. */
             recording_domains?: (string | null)[] | null;
@@ -14935,12 +16078,12 @@ export interface components {
         PieChartSettings: {
             /**
              * Showtotal
-             * @description Whether to show the aggregation total below the chart. Defaults to on.
+             * @description Whether to show the aggregation total. Defaults to on only when slices show values.
              * @default null
              */
             showTotal: boolean | null;
             /**
-             * @description What to render on each slice. Defaults to labels.
+             * @description What to render on each slice. Defaults to values.
              * @default null
              */
             sliceContent: components["schemas"]["SliceContent"] | null;
@@ -15815,6 +16958,8 @@ export interface components {
             week_start_day?: components["schemas"]["WeekStartDayEnum"] | components["schemas"]["NullEnum"];
             /** @description ID of the dashboard shown as the project's default landing dashboard. */
             primary_dashboard?: number | null;
+            /** @description ID of the dashboard shown on the product analytics Home tab. Null shows the built-in generic view. */
+            home_tab_dashboard?: number | null;
             live_events_columns?: string[] | null;
             /** @description Origins permitted to record session replays and heatmaps. Empty list allows all origins. */
             recording_domains?: (string | null)[] | null;
@@ -16153,7 +17298,7 @@ export interface components {
             error: boolean | null;
             /**
              * Error Code
-             * @description Stable machine-readable code for the error (the DRF exception code), when known.
+             * @description Stable machine-readable code for the error, when known: the DRF exception code, or the ClickHouse error name.
              * @default null
              */
             error_code: string | null;
@@ -18621,6 +19766,11 @@ export interface components {
          * @enum {string}
          */
         SchemaPropertyTypeEnum: "DateTime" | "String" | "Numeric" | "Boolean" | "Object";
+        /**
+         * Scope
+         * @enum {string}
+         */
+        Scope: "all" | "series";
         /** @enum {string} */
         SearchMatchTypeEnum: "exact" | "similar";
         /**
@@ -19105,6 +20255,11 @@ export interface components {
             /** @default null */
             formatting: components["schemas"]["ChartSettingsFormatting"] | null;
         };
+        /**
+         * Shelf
+         * @enum {string}
+         */
+        Shelf: "rows" | "columns";
         /**
          * SliceContent
          * @enum {string}
@@ -19700,6 +20855,12 @@ export interface components {
             workflow_task_rate_limit_per_day?: number | null;
             /** @description How many AI tasks all workflows in the project can create together in a rolling 24 hours. Null uses the default of 500; zero pauses task creation for the project. Support raises the limit above 2500. */
             workflow_task_team_rate_limit_per_day?: number | null;
+            /** @description ID of the verified email integration that new broadcasts and workflow email steps use as their sender. Null means no default. Set automatically when the project's first email sender is verified, and cleared when that integration is deleted. */
+            default_email_integration_id?: number | null;
+            /** @description Most marketing messages one person can get in the window, across all workflows. Set this together with marketing_frequency_cap_window_days. Set both to null to turn the cap off. */
+            marketing_frequency_cap_max_messages?: number | null;
+            /** @description Length of the rolling frequency cap window in days. Set this together with marketing_frequency_cap_max_messages. Set both to null to turn the cap off. */
+            marketing_frequency_cap_window_days?: number | null;
         };
         /**
          * TextMatching
@@ -19710,6 +20871,8 @@ export interface components {
         TileFilters: {
             /** @default null */
             breakdown_filter: components["schemas"]["BreakdownFilter"] | null;
+            /** @default null */
+            compareFilter: components["schemas"]["CompareFilter"] | null;
             /**
              * Date From
              * @default null
@@ -22475,10 +23638,11 @@ export interface components {
          * @description The query definition for this insight. The `kind` field determines the query type:
          *     - `InsightVizNode` — product analytics (trends, funnels, retention, paths, stickiness, lifecycle)
          *     - `DataVisualizationNode` — SQL insights using HogQL
+         *     - `BIVisualizationNode` — business intelligence worksheets with a HogQL source
          *     - `DataTableNode` — raw data tables
          *     - `HogQuery` — Hog language queries
          */
-        _InsightQuerySchema: components["schemas"]["InsightVizNode"] | components["schemas"]["DataTableNode"] | components["schemas"]["DataVisualizationNode"] | components["schemas"]["HogQuery"];
+        _InsightQuerySchema: components["schemas"]["InsightVizNode"] | components["schemas"]["DataTableNode"] | components["schemas"]["DataVisualizationNode"] | components["schemas"]["BIVisualizationNode"] | components["schemas"]["HogQuery"];
         /**
          * _InsightResultWarnings
          * @description Warnings attached to the query response that produced an insight's results.
@@ -22842,6 +24006,15 @@ export interface components {
              * @default null
              */
             savedViewId: string | null;
+        };
+        /** CanvasAppWidgetConfig */
+        CanvasAppWidgetConfig: {
+            /**
+             * Canvasid
+             * @description Canvas to render in the tile. Null until the user picks one in the widget settings.
+             * @default null
+             */
+            canvasId: string | null;
         };
     };
     responses: never;
@@ -23346,6 +24519,8 @@ export interface operations {
     dashboards_list: {
         parameters: {
             query?: {
+                /** @description Optional. Return only dashboards created by the user with this UUID. */
+                created_by?: string;
                 /** @description Optional. Exclude dashboards that PostHog generated. */
                 exclude_generated?: boolean;
                 /** @description Optional. Return only dashboards filed directly in this project-tree folder, e.g. 'Unfiled/Dashboards'. An empty string matches dashboards at the project root. Nested sub-folders are not included. */
@@ -23398,9 +24573,9 @@ export interface operations {
         };
         requestBody?: {
             content: {
-                "application/json": components["schemas"]["Dashboard"];
-                "application/x-www-form-urlencoded": components["schemas"]["Dashboard"];
-                "multipart/form-data": components["schemas"]["Dashboard"];
+                "application/json": components["schemas"]["DashboardWriteOpenApi"];
+                "application/x-www-form-urlencoded": components["schemas"]["DashboardWriteOpenApi"];
+                "multipart/form-data": components["schemas"]["DashboardWriteOpenApi"];
             };
         };
         responses: {
@@ -23466,9 +24641,9 @@ export interface operations {
         };
         requestBody?: {
             content: {
-                "application/json": components["schemas"]["Dashboard"];
-                "application/x-www-form-urlencoded": components["schemas"]["Dashboard"];
-                "multipart/form-data": components["schemas"]["Dashboard"];
+                "application/json": components["schemas"]["DashboardWriteOpenApi"];
+                "application/x-www-form-urlencoded": components["schemas"]["DashboardWriteOpenApi"];
+                "multipart/form-data": components["schemas"]["DashboardWriteOpenApi"];
             };
         };
         responses: {
@@ -24223,7 +25398,7 @@ export interface operations {
                 order?: string;
                 /** @description Filter to experiments created from an LLM prompt with this name. Matches experiments whose parameters.prompt_metadata.name equals the given value. */
                 prompt_name?: string;
-                /** @description Free-text search applied to the experiment name (case-insensitive). */
+                /** @description Free-text search applied to the experiment name and its feature flag key (case-insensitive). */
                 search?: string;
                 /** @description Filter by experiment status. "running", "paused", and "exposure_frozen" are mutually exclusive: "running" returns launched experiments with an active feature flag, "paused" returns launched experiments whose feature flag is deactivated, and "exposure_frozen" returns launched experiments whose exposure was frozen to the already-enrolled cohort while metrics keep flowing. "complete" is an alias for "stopped". "all" disables status filtering. */
                 status?: "all" | "complete" | "draft" | "exposure_frozen" | "paused" | "running" | "stopped";
@@ -24513,7 +25688,7 @@ export interface operations {
     feature_flags_list: {
         parameters: {
             query?: {
-                /** @description 'true' and 'false' filter on serving state, the flag's `active` column. 'STALE' returns enabled flags only, so a disabled flag is never STALE. An enabled flag matches when its last recorded `$feature_flag_called` event is more than 30 days old. With no recorded event, it matches when it is at least 30 days old and either stores `filters` as `{}` or serves one result to everyone through a release condition at 100% with no property filters. A flag with no recorded event and an empty `groups` list does not match, even when its `status` reads STALE. An SDK that sends no `$feature_flag_called` event leaves no record, so a STALE flag can still be in use. */
+                /** @description 'true' and 'false' filter on serving state, the flag's `active` column. 'STALE' returns enabled flags only, so a disabled flag is never STALE. An enabled flag matches when its last recorded `$feature_flag_called` event is more than 30 days old. With no recorded event, it matches when it is at least 30 days old and either stores `filters` as `{}` or serves one result to everyone through a release condition at 100% with no property filters. A flag with no recorded event and an empty `groups` list does not match, even when its `status` reads STALE. The reverse also happens: a multivariate flag matches when a variant is at 100% under a release condition at 100% with no property filters, or when that condition names a variant. Its `status` can still read ACTIVE, because an earlier variant in the list or an earlier targeted condition can serve a different result. In a flag of either type that mixes person and group aggregation, the filter also counts a group-aggregated condition at 100% with no property filters, which `status` does not. An SDK that sends no `$feature_flag_called` event leaves no record, so a STALE flag can still be in use. */
                 active?: "STALE" | "false" | "true";
                 /** @description Filter by archived state. When omitted, archived flags are excluded. */
                 archived?: "false" | "true";
@@ -24535,7 +25710,7 @@ export interface operations {
                 limit?: number;
                 /** @description The initial index from which to return the results. */
                 offset?: number;
-                /** @description Search by feature flag key or name. Case insensitive. */
+                /** @description Search by feature flag key or name. Case insensitive. Spaces, underscores, and hyphens count as the same separator. */
                 search?: string;
                 /** @description JSON-encoded list of tag names to filter feature flags by. */
                 tags?: string;
@@ -24695,6 +25870,122 @@ export interface operations {
             };
         };
     };
+    hog_functions_list: {
+        parameters: {
+            query?: {
+                created_at?: string;
+                created_by?: number;
+                enabled?: boolean;
+                id?: string;
+                /** @description Number of results to return per page. */
+                limit?: number;
+                /** @description The initial index from which to return the results. */
+                offset?: number;
+                /** @description Multiple values may be separated by commas. */
+                type?: string[];
+                updated_at?: string;
+            };
+            header?: never;
+            path: {
+                /** @description Project ID of the project you're trying to access. To find the ID of the project, make a call to /api/projects/. */
+                project_id: components["parameters"]["ProjectIdPath"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedHogFunctionMinimalList"];
+                };
+            };
+        };
+    };
+    hog_functions_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Project ID of the project you're trying to access. To find the ID of the project, make a call to /api/projects/. */
+                project_id: components["parameters"]["ProjectIdPath"];
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["HogFunction"];
+                "application/x-www-form-urlencoded": components["schemas"]["HogFunction"];
+                "multipart/form-data": components["schemas"]["HogFunction"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HogFunction"];
+                };
+            };
+        };
+    };
+    hog_functions_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this hog function. */
+                id: string;
+                /** @description Project ID of the project you're trying to access. To find the ID of the project, make a call to /api/projects/. */
+                project_id: components["parameters"]["ProjectIdPath"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HogFunction"];
+                };
+            };
+        };
+    };
+    hog_functions_partial_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A UUID string identifying this hog function. */
+                id: string;
+                /** @description Project ID of the project you're trying to access. To find the ID of the project, make a call to /api/projects/. */
+                project_id: components["parameters"]["ProjectIdPath"];
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedHogFunction"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedHogFunction"];
+                "multipart/form-data": components["schemas"]["PatchedHogFunction"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HogFunction"];
+                };
+            };
+        };
+    };
     insights_list: {
         parameters: {
             query?: {
@@ -24712,13 +26003,15 @@ export interface operations {
                 date_from?: string;
                 /** @description Filter by `last_modified_at < date_to`. Accepts absolute dates or relative strings. */
                 date_to?: string;
+                /** @description Exclude Business intelligence worksheets from the insight list. */
+                exclude_bi?: boolean;
                 /** @description Include this parameter (any value) to restrict results to insights marked as favorited. */
                 favorited?: boolean;
                 format?: "csv" | "json";
                 /** @description Opt in to receiving the deprecated `dashboards` field in insight payloads. Once opt-in enforcement is enabled, API-token callers stop receiving it by default; use `dashboard_tiles` instead. */
                 include_dashboards?: boolean;
-                /** @description Restrict to a single insight type. `JSON` matches non-wrapper query insights; `SQL` matches HogQL queries. */
-                insight?: "FUNNELS" | "JOURNEYS" | "JSON" | "LIFECYCLE" | "PATHS" | "RETENTION" | "SQL" | "STICKINESS" | "TRENDS";
+                /** @description Restrict to a single insight type. `JSON` matches non-wrapper query insights; `SQL` matches HogQL queries; `BI` matches editable worksheets. */
+                insight?: "BI" | "FUNNELS" | "JOURNEYS" | "JSON" | "LIFECYCLE" | "PATHS" | "RETENTION" | "SQL" | "STICKINESS" | "TRENDS";
                 /** @description Filter by `last_viewed_at > last_viewed_date_from`. Accepts absolute or relative dates. */
                 last_viewed_date_from?: string;
                 /** @description Filter by `last_viewed_at < last_viewed_date_to`. Accepts absolute or relative dates. */
@@ -24727,6 +26020,8 @@ export interface operations {
                 limit?: number;
                 /** @description The initial index from which to return the results. */
                 offset?: number;
+                /** @description Sort by an insight field, with a leading minus for descending order. Supports last_modified_at and last_viewed_at. */
+                order?: string;
                 /**
                  * @description Whether to refresh the retrieved insights, how aggressively, and if sync or async:
                  *     - `'force_cache'` - return cached data or a cache miss; always completes immediately as it never calculates

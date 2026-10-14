@@ -29,6 +29,11 @@ inverseOperationIds:
   - batch_exports_partial_update
   - batch_exports_destroy
 
+  - hog_functions_list
+  - hog_functions_create
+  - hog_functions_retrieve
+  - hog_functions_partial_update
+
   - environments_endpoints_list
   - environments_endpoints_create
   - environments_endpoints_retrieve
