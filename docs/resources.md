@@ -61,7 +61,7 @@ Source of truth for the API column: registered viewsets in [`posthog/posthog/api
 
 | Resource              | PostHog API                                  | posthog-definitions | Notes                          |
 | --------------------- | -------------------------------------------- | ------------------- | ------------------------------ |
-| Hog functions         | ✅ `environments/{id}/hog_functions`         | ❌                  | Destinations / transformations |
+| Hog functions         | ✅ `projects/{id}/hog_functions`             | ✅                  | Destinations / transformations |
 | Hog flows             | ✅ `environments/{id}/hog_flows`             | ❌                  | Campaign builder               |
 | Messaging templates   | ✅ `environments/{id}/messaging_templates`   | ❌                  |                                |
 | Messaging categories  | ✅ `environments/{id}/messaging_categories`  | ❌                  |                                |
@@ -96,7 +96,7 @@ Source of truth for the API column: registered viewsets in [`posthog/posthog/api
 
 ## Summary
 
-Currently shipped: **13 resource types** — Dashboards, Insights, Feature flags, Endpoints, Schema property groups, Event definitions, Experiments, Experiment holdouts, Experiment saved metrics, Project settings, Cohorts, Actions, and Batch exports. Event definitions and property groups together feed `createTypedPostHog`, which wraps any `posthog-js`-shaped client and type-checks `.capture(name, properties)` at compile time against the same specs synced via `apply`. Experiments are declarative across the full lifecycle (draft / running / paused / stopped) — apply drives the launch / pause / resume / end transitions to match. Project settings is the first singleton resource: declared as one block, field-level diff against the live row, declared-only PATCH. Cohorts run before feature flags in the apply order, leaving the door open for cohort-by-key references inside flag conditions.
+Currently shipped: **14 resource types** — Dashboards, Insights, Feature flags, Endpoints, Schema property groups, Event definitions, Experiments, Experiment holdouts, Experiment saved metrics, Project settings, Cohorts, Actions, Batch exports, and Hog functions. Event definitions and property groups together feed `createTypedPostHog`, which wraps any `posthog-js`-shaped client and type-checks `.capture(name, properties)` at compile time against the same specs synced via `apply`. Experiments are declarative across the full lifecycle (draft / running / paused / stopped) — apply drives the launch / pause / resume / end transitions to match. Project settings is the first singleton resource: declared as one block, field-level diff against the live row, declared-only PATCH. Cohorts run before feature flags in the apply order, leaving the door open for cohort-by-key references inside flag conditions.
 
 Reasonable IaC targets across the API surface: **~25–30** (cohorts, actions, surveys, annotations, alerts, hog functions/flows, error-tracking rules, warehouse queries, …).
 

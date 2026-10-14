@@ -6,6 +6,7 @@ import { cohortResource } from "./cohort/index.js";
 import { dashboardResource } from "./dashboard/index.js";
 import { endpointResource } from "./endpoint/index.js";
 import { featureFlagResource } from "./feature-flag/index.js";
+import { hogFunctionResource } from "./hog-function/index.js";
 import { insightResource } from "./insight/index.js";
 import { eventDefinitionResource } from "./event-definition/index.js";
 import { experimentResource } from "./experiment/index.js";
@@ -30,6 +31,7 @@ const REGISTRY: ReadonlyArray<ResourceModule<unknown, unknown>> = [
   experimentHoldoutResource as ResourceModule<unknown, unknown>,
   experimentSavedMetricResource as ResourceModule<unknown, unknown>,
   featureFlagResource as ResourceModule<unknown, unknown>,
+  hogFunctionResource as ResourceModule<unknown, unknown>,
   insightResource as ResourceModule<unknown, unknown>,
   projectSettingsResource as ResourceModule<unknown, unknown>,
   propertyGroupResource as ResourceModule<unknown, unknown>,
@@ -49,6 +51,7 @@ export { actionResource } from "./action/index.js";
 export { batchExportResource } from "./batch-export/index.js";
 export { cohortResource } from "./cohort/index.js";
 export { featureFlagResource } from "./feature-flag/index.js";
+export { hogFunctionResource } from "./hog-function/index.js";
 export { endpointResource } from "./endpoint/index.js";
 export { propertyGroupResource } from "./property-group/index.js";
 export { eventDefinitionResource } from "./event-definition/index.js";

@@ -32,6 +32,13 @@ export type {
 } from "./resources/action/index.js";
 
 export { batchExport } from "./resources/batch-export/index.js";
+export { hogFunction } from "./resources/hog-function/index.js";
+export type {
+  HogFunction,
+  HogFunctionInputSchema,
+  HogFunctionMapping,
+  HogFunctionType,
+} from "./resources/hog-function/index.js";
 export type {
   BatchExport,
   BatchExportDestination,
