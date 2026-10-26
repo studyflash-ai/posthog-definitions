@@ -97,7 +97,7 @@ function parseApply(argv: string[]): ApplyArgs {
         args.host = expectValue(argv, ++i, flag);
         break;
       case "--kind":
-        args.kinds = parseKinds(expectValue(argv, ++i, flag));
+        args.kinds = parseKinds(expectValue(argv, ++i, flag), flag);
         break;
       case "--help":
       case "-h":
@@ -158,7 +158,7 @@ function parsePull(argv: string[]): PullArgs {
       case "--kind":
         // Validity of each kind is checked at runtime against the registry of
         // pull-capable resources — the CLI doesn't carry a hard-coded list.
-        args.kinds = parseKinds(expectValue(argv, ++i, flag));
+        args.kinds = parseKinds(expectValue(argv, ++i, flag), flag);
         break;
       case "--help":
       case "-h":
@@ -209,11 +209,13 @@ function parseDump(argv: string[]): DumpArgs {
   return args;
 }
 
-function parseKinds(value: string): string[] {
-  return value
+function parseKinds(value: string, flag: string): string[] {
+  const kinds = value
     .split(",")
     .map((s) => s.trim())
     .filter(Boolean);
+  if (kinds.length === 0) throw new ArgError(`${flag} expects at least one kind.`);
+  return kinds;
 }
 
 function expectValue(argv: string[], index: number, flag: string): string {

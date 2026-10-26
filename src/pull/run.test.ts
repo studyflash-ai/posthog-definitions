@@ -78,6 +78,36 @@ describe("runPull orchestrator", () => {
     });
   });
 
+  it("renders a target whose dependency isn't a target", async () => {
+    await withTempDir(async (dir) => {
+      const parent = makeFakeResource<unknown, Row>({ name: "parents" });
+      const child = makeFakeResource<unknown, Row>({
+        name: "children",
+        dependsOn: [parent],
+        listAll: async () => [{ id: 1, name: "only" }],
+        getById: async (_c, id) => ({ id: Number(id), name: `row-${id}` }),
+        pullFilter: () => ({ kept: true }) as const,
+        pullLabel: (row) => ({ primary: row.name }),
+        serverIdOf: (row) => row.id,
+        renderToFile: (row: Row): RenderedFile => ({
+          filename: `${row.name}.ts`,
+          contents: `export default { id: ${row.id} };\n`,
+          specKey: row.name,
+        }),
+        tagOnServer: async () => {},
+      });
+
+      const result = await runPull(FAKE_CONFIG, {
+        outDir: dir,
+        resources: [child],
+        selectionByResource: new Map([["children", new Set([1])]]),
+        dryRun: true,
+      });
+
+      expect(result.dryRunSkipped.some((f) => f.endsWith("children/only.ts"))).toBe(true);
+    });
+  });
+
   it("cascades pullDependencies and fetches missing rows by id", async () => {
     await withTempDir(async (dir) => {
       const insightCalls: number[] = [];

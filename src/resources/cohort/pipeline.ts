@@ -85,6 +85,12 @@ export function cohortPayload(spec: Cohort, hash: string): CohortCreate {
   return payload;
 }
 
+/** PostHog refuses a static cohort created with no source of members; an empty person list is one. */
+export function cohortCreatePayload(spec: Cohort, hash: string): CohortCreate {
+  const payload = cohortPayload(spec, hash);
+  return spec.is_static ? { ...payload, _create_static_person_ids: [] } : payload;
+}
+
 export function looksLikeCohort(value: unknown): value is Cohort {
   return getResourceKind(value) === "cohort";
 }
@@ -155,13 +161,17 @@ export async function runCohortOp(
     return;
   }
 
-  const payload = cohortPayload(op.spec, cohortHash(op.spec));
-
   if (op.kind === "create") {
-    const created = await createCohort(config, payload, options);
+    const created = await createCohort(
+      config,
+      cohortCreatePayload(op.spec, cohortHash(op.spec)),
+      options,
+    );
     ctx.cohortIdByKey.set(op.spec.key, created.id);
     return;
   }
+
+  const payload = cohortPayload(op.spec, cohortHash(op.spec));
 
   await assertManagedCohort(config, op.server.id, op.spec.key, options);
   const updated = await updateCohort(config, op.server.id, payload, options);

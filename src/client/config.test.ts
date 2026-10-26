@@ -38,7 +38,7 @@ describe("loadConfig extra headers", () => {
       host: "https://example.com",
       projectId: "1",
       apiKey: "phx_test",
-      headers: { Authorization: "Bearer other", "X-Extra": "1" },
+      headers: { Authorization: "Bearer other", authorization: "Bearer lower", "X-Extra": "1" },
     });
     expect(headers).toEqual({ Authorization: "Bearer phx_test", "X-Extra": "1" });
   });

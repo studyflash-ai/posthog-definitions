@@ -10,6 +10,8 @@ import {
   type DisplayValue,
 } from "../../apply/display.js";
 import { SafetyViolationError } from "../../apply/errors.js";
+import type { ServerCohort } from "../cohort/client.js";
+import { cohortKeyFromServer } from "../cohort/pipeline.js";
 import type { Cohort } from "../cohort/sdk.js";
 import {
   getResourceKind,
@@ -114,6 +116,27 @@ export function resolveCohortRefs(spec: FeatureFlag, ctx: ApplyContext): Feature
     }
     return id;
   });
+}
+
+/** Whether the server's flag targets other cohorts than the spec's references point at on this project. */
+export function cohortRefsStale(
+  spec: FeatureFlag,
+  server: ServerFeatureFlag,
+  cohorts: ServerCohort[],
+): boolean {
+  if (!collectPropertyFilters(spec.filters).some((p) => cohortRef(p))) return false;
+  const idByKey = new Map<string, number>();
+  for (const row of cohorts) {
+    const key = cohortKeyFromServer(row);
+    if (key) idByKey.set(key, row.id);
+  }
+  const cohortValues = (filters: FeatureFlagFilters): string[] =>
+    collectPropertyFilters(filters)
+      .filter((p) => p.type === "cohort")
+      .map((p) => String(p.value));
+  const wanted = mapCohortRefs(spec.filters, (cohort) => idByKey.get(cohort.key) ?? null);
+  const current = server.filters as unknown as FeatureFlagFilters;
+  return JSON.stringify(cohortValues(wanted)) !== JSON.stringify(cohortValues(current));
 }
 
 export function featureFlagPayload(
@@ -236,8 +259,13 @@ export function validateFeatureFlags(specs: FeatureFlag[], state?: DesiredState)
     }
 
     for (const property of collectPropertyFilters(spec.filters)) {
+      if (property.type !== "cohort") continue;
       const cohort = cohortRef(property);
-      if (cohort && !knownCohortKeys.has(cohort.key)) {
+      if (!cohort) {
+        issues.push(
+          `feature flag "${spec.key}" targets cohort ${JSON.stringify(property.value)} by id, which differs between projects — use the cohort's spec as the value`,
+        );
+      } else if (!knownCohortKeys.has(cohort.key)) {
         issues.push(
           `feature flag "${spec.key}" references unknown cohort "${cohort.key}" — declare it with cohort({ key: "${cohort.key}", … })`,
         );

@@ -149,10 +149,9 @@ export async function runPull(
   }> = [];
 
   // Codegen in dependency order over the *targeted* resources, not the whole
-  // global registry. Reusing topoOrder over the targets — it tolerates missing
-  // edges (a target whose dependency isn't a target still works; the
-  // optional-import path covers that case).
-  const orderedTargets = topoOrder(options.resources.slice());
+  // global registry. A target whose dependency isn't a target still renders;
+  // the optional-import path covers that case.
+  const orderedTargets = topoOrder(options.resources.slice(), { ignoreMissingDependencies: true });
 
   for (const resource of orderedTargets) {
     if (resource.kind === "singleton") {

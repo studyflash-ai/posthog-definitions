@@ -162,6 +162,12 @@ export interface CollectionResourceModule<TSpec = unknown, TServer = unknown>
 
   hash(spec: TSpec): string;
 
+  /**
+   * Optional: whether a row whose stored hash matches still needs an update,
+   * for state the hash leaves out on purpose, such as the server ids it points at.
+   */
+  isStale?(spec: TSpec, server: TServer, current: CurrentState): boolean;
+
   prune(config: ClientConfig, orphan: TServer, options?: { verbose?: boolean }): Promise<boolean>;
 
   // ---- Pull-side hooks (optional; resources that don't implement them can't be pulled) ----

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { diff } from "../../apply/diff.js";
 import { cohort } from "../cohort/sdk.js";
 import { newApplyContext, type DesiredState } from "../types.js";
+import type { ServerCohort } from "../cohort/client.js";
 import type { FeatureFlag } from "./sdk.js";
 import type { ServerFeatureFlag } from "./client.js";
 import { featureFlagHash, resolveCohortRefs, validateFeatureFlags } from "./pipeline.js";
@@ -213,6 +214,45 @@ describe("feature flag cohort references", () => {
     expect(() => resolveCohortRefs(targeting(internal), newApplyContext())).toThrow(
       /references cohort "internal-users" but no server id is known/,
     );
+  });
+
+  it("rejects a literal cohort id", () => {
+    expect(validateFeatureFlags([targeting(25969)], withCohorts())).toEqual([
+      'feature flag "beta" targets cohort 25969 by id, which differs between projects — use the cohort\'s spec as the value',
+    ]);
+  });
+
+  function planFor(serverCohortId: number, cohorts: Array<{ id: number; key: string }>): string {
+    const flag = targeting(internal);
+    const server: ServerFeatureFlag = {
+      ...serverRow(1, "beta", featureFlagHash(flag)),
+      filters: targeting(serverCohortId).filters as unknown as Record<string, unknown>,
+    };
+    const current = currentFor([server]);
+    current.set(
+      "cohorts",
+      cohorts.map(
+        ({ id, key }) =>
+          ({
+            id,
+            name: key,
+            description: `<!-- iac:cohorts:${key} iac:hash:h -->`,
+          }) as ServerCohort,
+      ),
+    );
+    return diff(desiredFor([flag]), current).get("feature-flags")!.ops[0]!.kind;
+  }
+
+  it("keeps a flag unchanged while it targets its cohort's id on this project", () => {
+    expect(planFor(5, [{ id: 5, key: "internal-users" }])).toBe("unchanged");
+  });
+
+  it("updates a flag whose cohort was recreated under another id", () => {
+    expect(planFor(5, [{ id: 7, key: "internal-users" }])).toBe("update");
+  });
+
+  it("updates a flag whose cohort doesn't exist on this project yet", () => {
+    expect(planFor(5, [])).toBe("update");
   });
 
   it("flags references to cohorts that aren't declared", () => {

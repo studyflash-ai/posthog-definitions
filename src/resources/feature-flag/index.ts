@@ -1,7 +1,9 @@
 import type { ApplyContext, CollectionResourceModule } from "../types.js";
+import type { ServerCohort } from "../cohort/client.js";
 import { cohortResource } from "../cohort/index.js";
 import type { FeatureFlag } from "./sdk.js";
 import {
+  cohortRefsStale,
   displayFeatureFlag,
   displayFeatureFlagFromServer,
   FEATURE_FLAG_TAG_PREFIX,
@@ -52,6 +54,8 @@ export const featureFlagResource: CollectionResourceModule<FeatureFlag, ServerFe
   hashFromServer: (server) => featureFlagHashFromTags(server.tags),
 
   hash: featureFlagHash,
+  isStale: (spec, server, current) =>
+    cohortRefsStale(spec, server, (current.get(cohortResource.name) ?? []) as ServerCohort[]),
   validate: (specs, state) => validateFeatureFlags(specs, state),
   executeOp: runFeatureFlagOp,
   prune: pruneFeatureFlag,

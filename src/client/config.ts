@@ -61,7 +61,10 @@ function parseExtraHeaders(raw: string | undefined): Record<string, string> | un
   return parsed as Record<string, string>;
 }
 
-/** Headers for every API call: the extra headers, then the API key, which they can't override. */
+/** Headers for every API call: the extra headers, then the API key, which they can't override, whatever the header's case. */
 export function requestHeaders(config: ClientConfig): Record<string, string> {
-  return { ...config.headers, Authorization: `Bearer ${config.apiKey}` };
+  const extra = Object.entries(config.headers ?? {}).filter(
+    ([name]) => name.toLowerCase() !== "authorization",
+  );
+  return { ...Object.fromEntries(extra), Authorization: `Bearer ${config.apiKey}` };
 }

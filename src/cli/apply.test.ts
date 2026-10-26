@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildApplyResult } from "./apply.js";
-import type { ApplyArgs } from "./args.js";
+import { ArgError, parseArgs, type ApplyArgs } from "./args.js";
 
 const config = { host: "https://example.com", projectId: "1", apiKey: "phx_test" };
 
@@ -17,6 +17,11 @@ function args(kinds: string[]): ApplyArgs {
 }
 
 describe("apply --kind", () => {
+  it("rejects an empty kind list", () => {
+    expect(() => parseArgs(["apply", "--kind", ""])).toThrow(ArgError);
+    expect(() => parseArgs(["apply", "--kind", ","])).toThrow(/at least one kind/);
+  });
+
   it("rejects a kind that isn't a resource", async () => {
     const result = await buildApplyResult(config, args(["flags"]));
     expect(result).toMatchObject({ ok: false, stage: "args" });

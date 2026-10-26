@@ -64,7 +64,7 @@ function filtersWithCohortImports(
     const entry = ctx.importForServerIdOptional("cohorts", property.value);
     if (!entry) {
       ctx.warn(
-        `Feature flag "${server.key}" targets cohort id=${property.value}, which wasn't pulled; it stays a literal id that only this project knows.`,
+        `Feature flag "${server.key}" targets cohort id=${property.value}, which wasn't pulled; it stays a literal id, which apply rejects. Pull the cohort too.`,
       );
       return property;
     }

@@ -155,6 +155,16 @@ describe("topoOrder", () => {
     );
   });
 
+  it("drops edges to modules outside the list when asked", () => {
+    const outside = makeFakeResource({ name: "outside" });
+    const dependent = makeFakeResource({ name: "dependent", dependsOn: [outside] });
+    const other = makeFakeResource({ name: "other" });
+
+    expect(
+      topoOrder([dependent, other], { ignoreMissingDependencies: true }).map((r) => r.name),
+    ).toEqual(["dependent", "other"]);
+  });
+
   it("throws on duplicate resource names with distinct objects", () => {
     const a1 = makeFakeResource({ name: "a" });
     const a2 = makeFakeResource({ name: "a" });
