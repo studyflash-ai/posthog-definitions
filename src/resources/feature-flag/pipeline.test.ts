@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { diff } from "../../apply/diff.js";
-import type { DesiredState } from "../types.js";
+import { cohort } from "../cohort/sdk.js";
+import { newApplyContext, type DesiredState } from "../types.js";
+import type { ServerCohort } from "../cohort/client.js";
 import type { FeatureFlag } from "./sdk.js";
 import type { ServerFeatureFlag } from "./client.js";
-import { featureFlagHash, validateFeatureFlags } from "./pipeline.js";
+import { featureFlagHash, resolveCohortRefs, validateFeatureFlags } from "./pipeline.js";
 
 function spec(key: string, overrides: Partial<FeatureFlag> = {}): FeatureFlag {
   return {
@@ -153,5 +155,110 @@ describe("feature flag validation", () => {
   it("accepts a minimal valid spec", () => {
     const issues = validateFeatureFlags([spec("ok")]);
     expect(issues).toEqual([]);
+  });
+});
+
+describe("feature flag cohort references", () => {
+  const internal = cohort({
+    key: "internal-users",
+    name: "Internal Users",
+    filters: { properties: { type: "OR", values: [] } },
+  });
+
+  function targeting(value: unknown): FeatureFlag {
+    return spec("beta", {
+      filters: {
+        groups: [
+          {
+            properties: [{ key: "id", type: "cohort", value, operator: "in" }],
+            rollout_percentage: 100,
+          },
+        ],
+      },
+    });
+  }
+
+  function withCohorts(...keys: string[]): DesiredState {
+    const state: DesiredState = new Map();
+    state.set(
+      "cohorts",
+      keys.map((key) => ({ path: "<test>", spec: cohort({ key, name: key, is_static: true }) })),
+    );
+    return state;
+  }
+
+  it("hashes a cohort reference by key, not by the cohort's contents", () => {
+    const edited = cohort({ ...internal, filters: { properties: { type: "AND", values: [] } } });
+    expect(featureFlagHash(targeting(internal))).toBe(featureFlagHash(targeting(edited)));
+    expect(featureFlagHash(targeting(internal))).not.toBe(featureFlagHash(targeting(25969)));
+  });
+
+  it("resolves a reference to the cohort's id on this project", () => {
+    const ctx = newApplyContext();
+    ctx.cohortIdByKey.set("internal-users", 25969);
+    const filters = resolveCohortRefs(targeting(internal), ctx);
+    expect(filters.groups[0]!.properties[0]).toEqual({
+      key: "id",
+      type: "cohort",
+      value: 25969,
+      operator: "in",
+    });
+  });
+
+  it("leaves literal cohort ids and flags without references untouched", () => {
+    const literal = targeting(25969);
+    expect(resolveCohortRefs(literal, newApplyContext())).toBe(literal.filters);
+  });
+
+  it("throws when the cohort has no known id", () => {
+    expect(() => resolveCohortRefs(targeting(internal), newApplyContext())).toThrow(
+      /references cohort "internal-users" but no server id is known/,
+    );
+  });
+
+  it("rejects a literal cohort id", () => {
+    expect(validateFeatureFlags([targeting(25969)], withCohorts())).toEqual([
+      'feature flag "beta" targets cohort 25969 by id, which differs between projects — use the cohort\'s spec as the value',
+    ]);
+  });
+
+  function planFor(serverCohortId: number, cohorts: Array<{ id: number; key: string }>): string {
+    const flag = targeting(internal);
+    const server: ServerFeatureFlag = {
+      ...serverRow(1, "beta", featureFlagHash(flag)),
+      filters: targeting(serverCohortId).filters as unknown as Record<string, unknown>,
+    };
+    const current = currentFor([server]);
+    current.set(
+      "cohorts",
+      cohorts.map(
+        ({ id, key }) =>
+          ({
+            id,
+            name: key,
+            description: `<!-- iac:cohorts:${key} iac:hash:h -->`,
+          }) as ServerCohort,
+      ),
+    );
+    return diff(desiredFor([flag]), current).get("feature-flags")!.ops[0]!.kind;
+  }
+
+  it("keeps a flag unchanged while it targets its cohort's id on this project", () => {
+    expect(planFor(5, [{ id: 5, key: "internal-users" }])).toBe("unchanged");
+  });
+
+  it("updates a flag whose cohort was recreated under another id", () => {
+    expect(planFor(5, [{ id: 7, key: "internal-users" }])).toBe("update");
+  });
+
+  it("updates a flag whose cohort doesn't exist on this project yet", () => {
+    expect(planFor(5, [])).toBe("update");
+  });
+
+  it("flags references to cohorts that aren't declared", () => {
+    expect(validateFeatureFlags([targeting(internal)], withCohorts("internal-users"))).toEqual([]);
+    expect(validateFeatureFlags([targeting(internal)], withCohorts("other"))).toEqual([
+      'feature flag "beta" references unknown cohort "internal-users" — declare it with cohort({ key: "internal-users", … })',
+    ]);
   });
 });

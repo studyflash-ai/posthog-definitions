@@ -48,7 +48,10 @@ function diffCollection(
     const server = currentByKey.get(key);
     if (!server) {
       ops.push({ kind: "create", spec });
-    } else if (resource.hashFromServer(server) === resource.hash(spec)) {
+    } else if (
+      resource.hashFromServer(server) === resource.hash(spec) &&
+      !resource.isStale?.(spec, server, current)
+    ) {
       ops.push({ kind: "unchanged", spec, server });
     } else {
       ops.push({ kind: "update", spec, server });

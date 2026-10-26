@@ -29,9 +29,10 @@ export type CohortCreate = {
   filters?: unknown;
   query?: Record<string, unknown>;
   cohort_type?: "static" | "person_property" | "behavioral" | "realtime" | "analytical";
+  _create_static_person_ids?: string[];
 };
 
-export type CohortUpdate = Partial<CohortCreate>;
+export type CohortUpdate = Partial<Omit<CohortCreate, "_create_static_person_ids">>;
 
 type CohortBody = components["schemas"]["Cohort"];
 type PatchedBody = components["schemas"]["PatchedCohort"];

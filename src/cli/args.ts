@@ -7,6 +7,8 @@ export type ApplyArgs = {
   json: boolean;
   host?: string;
   project?: string;
+  /** Resource kinds to apply. Empty or absent means every kind. */
+  kinds?: string[];
 };
 
 export type PullArgs = {
@@ -94,6 +96,9 @@ function parseApply(argv: string[]): ApplyArgs {
       case "--host":
         args.host = expectValue(argv, ++i, flag);
         break;
+      case "--kind":
+        args.kinds = parseKinds(expectValue(argv, ++i, flag), flag);
+        break;
       case "--help":
       case "-h":
         throw new ArgError("Run 'posthog-definitions help' for usage.");
@@ -150,17 +155,11 @@ function parsePull(argv: string[]): PullArgs {
       case "--host":
         args.host = expectValue(argv, ++i, flag);
         break;
-      case "--kind": {
-        const value = expectValue(argv, ++i, flag);
-        const kinds = value
-          .split(",")
-          .map((s) => s.trim())
-          .filter(Boolean);
+      case "--kind":
         // Validity of each kind is checked at runtime against the registry of
         // pull-capable resources — the CLI doesn't carry a hard-coded list.
-        args.kinds = kinds;
+        args.kinds = parseKinds(expectValue(argv, ++i, flag), flag);
         break;
-      }
       case "--help":
       case "-h":
         throw new ArgError("Run 'posthog-definitions help' for usage.");
@@ -210,6 +209,15 @@ function parseDump(argv: string[]): DumpArgs {
   return args;
 }
 
+function parseKinds(value: string, flag: string): string[] {
+  const kinds = value
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  if (kinds.length === 0) throw new ArgError(`${flag} expects at least one kind.`);
+  return kinds;
+}
+
 function expectValue(argv: string[], index: number, flag: string): string {
   const value = argv[index];
   if (value === undefined || value.startsWith("--")) {
@@ -240,6 +248,10 @@ Apply flags:
                        touches resources tagged iac:dashboards:* /
                        iac:insights:* — hand-built resources are never
                        considered.
+  --kind <list>        Comma-separated list of resource kinds to apply
+                       (e.g. cohorts,feature-flags). Other kinds are neither
+                       read, changed nor pruned. Must include every kind the
+                       listed ones depend on.
 
 Pull flags:
   --kind <list>        Comma-separated list of resource kinds to pull
@@ -263,4 +275,6 @@ Environment:
                              and insight:read/write scopes.
   POSTHOG_PROJECT_ID         Required. Numeric project id.
   POSTHOG_HOST               Optional. Defaults to https://us.posthog.com.
+  POSTHOG_EXTRA_HEADERS      Optional. JSON object of headers sent with every
+                             request, e.g. an access proxy's service token.
 `;

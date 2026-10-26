@@ -1,6 +1,9 @@
 import type { ApplyContext, CollectionResourceModule } from "../types.js";
+import type { ServerCohort } from "../cohort/client.js";
+import { cohortResource } from "../cohort/index.js";
 import type { FeatureFlag } from "./sdk.js";
 import {
+  cohortRefsStale,
   displayFeatureFlag,
   displayFeatureFlagFromServer,
   FEATURE_FLAG_TAG_PREFIX,
@@ -19,6 +22,7 @@ import {
   type ServerFeatureFlag,
 } from "./client.js";
 import {
+  pullDependencies,
   pullFilter,
   pullLabel,
   renderToFile,
@@ -40,6 +44,7 @@ export const featureFlagResource: CollectionResourceModule<FeatureFlag, ServerFe
   name: "feature-flags",
   displayName: "feature flag",
   identityPrefix: FEATURE_FLAG_TAG_PREFIX,
+  dependsOn: [cohortResource],
 
   isSpec: looksLikeFeatureFlag,
   specKey: (spec) => spec.key,
@@ -49,12 +54,14 @@ export const featureFlagResource: CollectionResourceModule<FeatureFlag, ServerFe
   hashFromServer: (server) => featureFlagHashFromTags(server.tags),
 
   hash: featureFlagHash,
-  validate: (specs) => validateFeatureFlags(specs),
+  isStale: (spec, server, current) =>
+    cohortRefsStale(spec, server, (current.get(cohortResource.name) ?? []) as ServerCohort[]),
+  validate: (specs, state) => validateFeatureFlags(specs, state),
   executeOp: runFeatureFlagOp,
   prune: pruneFeatureFlag,
 
   displaySpec: (spec, _ctx: ApplyContext) => displayFeatureFlag(spec),
-  displayServer: (server, _ctx: ApplyContext) => displayFeatureFlagFromServer(server),
+  displayServer: (server, ctx: ApplyContext) => displayFeatureFlagFromServer(server, ctx),
 
   listAll: listFeatureFlags,
   getById: (config, id, options) =>
@@ -62,6 +69,7 @@ export const featureFlagResource: CollectionResourceModule<FeatureFlag, ServerFe
   pullFilter,
   pullLabel,
   serverIdOf,
+  pullDependencies,
   renderToFile,
   tagOnServer,
 };

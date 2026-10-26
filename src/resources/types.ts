@@ -75,6 +75,10 @@ export type ApplyContext = {
   experimentHoldoutIdByKey: Map<string, number>;
   /** Experiment-saved-metric server id by spec key. Populated by the experiment-saved-metric module's executor; read by the experiment module's resolver. */
   experimentSavedMetricIdByKey: Map<string, number>;
+  /** Cohort server id by spec key. Populated by the cohort module's executor; read by the feature-flag module to resolve cohort filters. */
+  cohortIdByKey: Map<string, number>;
+  /** Inverse of cohortIdByKey; populated when displaying server-side flag filters so we can show keys rather than ids. */
+  cohortKeyByServerId: Map<number, string>;
 };
 
 export function newApplyContext(): ApplyContext {
@@ -84,6 +88,8 @@ export function newApplyContext(): ApplyContext {
     propertyGroupIdByKey: new Map(),
     experimentHoldoutIdByKey: new Map(),
     experimentSavedMetricIdByKey: new Map(),
+    cohortIdByKey: new Map(),
+    cohortKeyByServerId: new Map(),
   };
 }
 
@@ -155,6 +161,12 @@ export interface CollectionResourceModule<TSpec = unknown, TServer = unknown>
   hashFromServer(server: TServer): string | undefined;
 
   hash(spec: TSpec): string;
+
+  /**
+   * Optional: whether a row whose stored hash matches still needs an update,
+   * for state the hash leaves out on purpose, such as the server ids it points at.
+   */
+  isStale?(spec: TSpec, server: TServer, current: CurrentState): boolean;
 
   prune(config: ClientConfig, orphan: TServer, options?: { verbose?: boolean }): Promise<boolean>;
 

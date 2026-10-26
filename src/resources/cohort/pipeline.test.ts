@@ -3,7 +3,7 @@ import { diff } from "../../apply/diff.js";
 import type { DesiredState } from "../types.js";
 import { cohort, type Cohort } from "./sdk.js";
 import type { ServerCohort } from "./client.js";
-import { cohortHash, validateCohorts } from "./pipeline.js";
+import { cohortCreatePayload, cohortHash, validateCohorts } from "./pipeline.js";
 
 const sampleFilters = {
   properties: {
@@ -124,6 +124,16 @@ describe("cohort pipeline", () => {
     const slice = diff(desiredFor([]), currentFor([handBuilt])).get("cohorts")!;
     expect(slice.ops.length).toBe(0);
     expect(slice.orphans.length).toBe(0);
+  });
+});
+
+describe("cohort create payload", () => {
+  it("gives a static cohort an empty member list, which PostHog needs to create it", () => {
+    const fixed = cohort({ key: "fixed", name: "Fixed", is_static: true });
+    expect(cohortCreatePayload(fixed, "h")._create_static_person_ids).toEqual([]);
+    expect(cohortCreatePayload(spec("dynamic"), "h")).not.toHaveProperty(
+      "_create_static_person_ids",
+    );
   });
 });
 

@@ -94,3 +94,33 @@ describe("cohort codegen", () => {
     expect("skipped" in result).toBe(true);
   });
 });
+
+describe("cohort codegen compiled fields", () => {
+  it("renderToFile drops the bytecode the server compiles from each filter", () => {
+    const ctx = makeCtx();
+    const result = renderToFile(
+      cohort({
+        filters: {
+          properties: {
+            type: "OR",
+            values: [
+              {
+                key: "email",
+                type: "person",
+                value: ["a@example.com"],
+                operator: "exact",
+                bytecode: ["_H", 1, 32, "a@example.com"],
+                conditionHash: "0123456789abcdef",
+              },
+            ],
+          },
+        },
+      }),
+      ctx,
+    );
+    if ("skipped" in result) throw new Error(`Expected RenderedFile: ${result.reason}`);
+    expect(result.contents).toContain("value: [\n");
+    expect(result.contents).not.toContain("bytecode");
+    expect(result.contents).not.toContain("conditionHash");
+  });
+});

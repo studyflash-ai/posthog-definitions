@@ -85,6 +85,12 @@ export function cohortPayload(spec: Cohort, hash: string): CohortCreate {
   return payload;
 }
 
+/** PostHog refuses a static cohort created with no source of members; an empty person list is one. */
+export function cohortCreatePayload(spec: Cohort, hash: string): CohortCreate {
+  const payload = cohortPayload(spec, hash);
+  return spec.is_static ? { ...payload, _create_static_person_ids: [] } : payload;
+}
+
 export function looksLikeCohort(value: unknown): value is Cohort {
   return getResourceKind(value) === "cohort";
 }
@@ -147,20 +153,29 @@ async function assertManagedCohort(
 export async function runCohortOp(
   config: ClientConfig,
   op: ResourceOp<Cohort, ServerCohort>,
-  _ctx: ApplyContext,
+  ctx: ApplyContext,
   options: { verbose?: boolean } = {},
 ): Promise<void> {
-  if (op.kind === "unchanged") return;
-
-  const payload = cohortPayload(op.spec, cohortHash(op.spec));
-
-  if (op.kind === "create") {
-    await createCohort(config, payload, options);
+  if (op.kind === "unchanged") {
+    ctx.cohortIdByKey.set(op.spec.key, op.server.id);
     return;
   }
 
+  if (op.kind === "create") {
+    const created = await createCohort(
+      config,
+      cohortCreatePayload(op.spec, cohortHash(op.spec)),
+      options,
+    );
+    ctx.cohortIdByKey.set(op.spec.key, created.id);
+    return;
+  }
+
+  const payload = cohortPayload(op.spec, cohortHash(op.spec));
+
   await assertManagedCohort(config, op.server.id, op.spec.key, options);
-  await updateCohort(config, op.server.id, payload, options);
+  const updated = await updateCohort(config, op.server.id, payload, options);
+  ctx.cohortIdByKey.set(op.spec.key, updated.id);
 }
 
 export async function pruneCohort(

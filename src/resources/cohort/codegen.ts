@@ -50,7 +50,7 @@ export function renderToFile(
       `Cohort "${slug}" is static — pull only creates the container; member lists are managed out-of-band.`,
     );
   } else if (server.filters) {
-    fields.filters = renderRawLiteral(server.filters, 2);
+    fields.filters = renderRawLiteral(withoutCompiledFields(server.filters), 2);
   } else {
     return {
       skipped: true,
@@ -65,6 +65,18 @@ export function renderToFile(
     `import { cohort } from "@posthog/definitions";\n\n` +
     `export default cohort(${body});\n`;
   return { filename: `${slug}.ts`, contents, specKey: slug };
+}
+
+/** The server compiles `bytecode` and `conditionHash` from each filter on save; they aren't the user's to declare. */
+function withoutCompiledFields(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(withoutCompiledFields);
+  if (!value || typeof value !== "object") return value;
+  const result: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(value)) {
+    if (k === "bytecode" || k === "bytecode_error" || k === "conditionHash") continue;
+    result[k] = withoutCompiledFields(v);
+  }
+  return result;
 }
 
 export async function tagOnServer(

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { PullRenderContext } from "../../pull/types.js";
-import { pullFilter, pullLabel, renderToFile } from "./codegen.js";
+import { pullDependencies, pullFilter, pullLabel, renderToFile } from "./codegen.js";
 import type { ServerFeatureFlag } from "./client.js";
 
 function makeCtx(): PullRenderContext & { warnings: string[] } {
@@ -90,5 +90,58 @@ describe("feature-flag codegen", () => {
     const ctx = makeCtx();
     renderToFile(flag({ has_encrypted_payloads: true }), ctx);
     expect(ctx.warnings.some((w) => w.includes("encrypted"))).toBe(true);
+  });
+});
+
+describe("feature-flag codegen cohort references", () => {
+  const targeted = flag({
+    filters: {
+      groups: [
+        {
+          properties: [
+            {
+              key: "id",
+              type: "cohort",
+              value: 25969,
+              operator: "in",
+              cohort_name: "Internal Users",
+            },
+          ],
+          rollout_percentage: 100,
+        },
+      ],
+    },
+  });
+
+  it("pullDependencies asks for the targeted cohorts", async () => {
+    const deps = await pullDependencies({ host: "", projectId: "1", apiKey: "" }, targeted);
+    expect(deps).toEqual([{ resourceName: "cohorts", serverId: 25969 }]);
+  });
+
+  it("renderToFile imports a pulled cohort instead of its id", () => {
+    const ctx = makeCtx();
+    ctx.importForServerIdOptional = (resourceName, serverId) =>
+      resourceName === "cohorts" && serverId === 25969
+        ? {
+            key: "internal-users",
+            varName: "internal_users",
+            filename: "internal-users.ts",
+            resourceName,
+          }
+        : undefined;
+    const result = renderToFile(targeted, ctx);
+    if ("skipped" in result) throw new Error(`Expected RenderedFile: ${result.reason}`);
+    expect(result.contents).toContain('import internal_users from "../cohorts/internal-users.js";');
+    expect(result.contents).toContain("value: internal_users,");
+    expect(result.contents).toContain('cohort_name: "Internal Users"');
+    expect(ctx.warnings).toEqual([]);
+  });
+
+  it("renderToFile keeps the id and warns when the cohort wasn't pulled", () => {
+    const ctx = makeCtx();
+    const result = renderToFile(targeted, ctx);
+    if ("skipped" in result) throw new Error(`Expected RenderedFile: ${result.reason}`);
+    expect(result.contents).toContain("value: 25969,");
+    expect(ctx.warnings.some((w) => w.includes("cohort id=25969"))).toBe(true);
   });
 });

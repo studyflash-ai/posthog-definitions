@@ -2,6 +2,8 @@ export type ClientConfig = {
   host: string;
   projectId: string;
   apiKey: string;
+  /** Sent with every request, e.g. an access proxy's service-token headers in front of a self-hosted instance. */
+  headers?: Record<string, string>;
 };
 
 export type ConfigOverrides = {
@@ -35,5 +37,34 @@ export function loadConfig(overrides: ConfigOverrides = {}): ClientConfig {
 
   const host = (overrides.host ?? process.env.POSTHOG_HOST ?? DEFAULT_HOST).replace(/\/$/, "");
 
-  return { host, projectId, apiKey };
+  const headers = parseExtraHeaders(process.env.POSTHOG_EXTRA_HEADERS);
+
+  return headers ? { host, projectId, apiKey, headers } : { host, projectId, apiKey };
+}
+
+function parseExtraHeaders(raw: string | undefined): Record<string, string> | undefined {
+  if (!raw) return undefined;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    throw new ConfigError("POSTHOG_EXTRA_HEADERS must be a JSON object of header names to values.");
+  }
+  if (
+    !parsed ||
+    typeof parsed !== "object" ||
+    Array.isArray(parsed) ||
+    !Object.values(parsed).every((v) => typeof v === "string")
+  ) {
+    throw new ConfigError("POSTHOG_EXTRA_HEADERS must be a JSON object of header names to values.");
+  }
+  return parsed as Record<string, string>;
+}
+
+/** Headers for every API call: the extra headers, then the API key, which they can't override, whatever the header's case. */
+export function requestHeaders(config: ClientConfig): Record<string, string> {
+  const extra = Object.entries(config.headers ?? {}).filter(
+    ([name]) => name.toLowerCase() !== "authorization",
+  );
+  return { ...Object.fromEntries(extra), Authorization: `Bearer ${config.apiKey}` };
 }

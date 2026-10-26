@@ -1,6 +1,6 @@
 import createClient, { type Client } from "openapi-fetch";
 import type { paths } from "../generated/api.js";
-import type { ClientConfig } from "./config.js";
+import { type ClientConfig, requestHeaders } from "./config.js";
 
 export type ApiClient = Client<paths>;
 
@@ -36,7 +36,7 @@ export type ApiClientOptions = {
 export function createApiClient(config: ClientConfig, options: ApiClientOptions = {}): ApiClient {
   const client = createClient<paths>({
     baseUrl: config.host,
-    headers: { Authorization: `Bearer ${config.apiKey}` },
+    headers: requestHeaders(config),
     fetch: makeRetriedFetch({ verbose: options.verbose }),
   });
 
@@ -85,7 +85,7 @@ export async function followPagination<T>(
   while (next) {
     const response = await fetchImpl(next, {
       method: "GET",
-      headers: { Authorization: `Bearer ${config.apiKey}` },
+      headers: requestHeaders(config),
     });
     if (!response.ok) {
       const text = await response.text();

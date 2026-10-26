@@ -140,6 +140,16 @@ function buildDisplayContext(
       ctx.insightIdByKey.set(key, id);
     }
   }
+
+  // Same for cohorts, so flag filter diffs render cohort keys rather than ids.
+  const cohortResource = resources.find((r) => r.name === "cohorts");
+  if (cohortResource && cohortResource.kind === "collection") {
+    for (const row of serverState.get("cohorts") ?? []) {
+      const key = cohortResource.keyFromServer(row);
+      if (!key) continue;
+      ctx.cohortKeyByServerId.set((row as { id: number }).id, key);
+    }
+  }
   return ctx;
 }
 
