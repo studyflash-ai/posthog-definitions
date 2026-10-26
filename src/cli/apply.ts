@@ -2,6 +2,7 @@ import type { ClientConfig } from "../client/config.js";
 import { ConfigError, loadConfig } from "../client/config.js";
 import { ApiError } from "../client/typed.js";
 import { RESOURCES } from "../resources/index.js";
+import type { DesiredState, ResourceModule } from "../resources/types.js";
 import { diff, type DiffResult } from "../apply/diff.js";
 import { execute, fetchCurrentState, SafetyViolationError } from "../apply/execute.js";
 import { formatPlan } from "../apply/format-plan.js";
@@ -69,19 +70,23 @@ export async function buildApplyResult(
 ): Promise<ApplyResult> {
   const debug = options.debug ?? (() => {});
 
+  const scope = resolveKinds(args.kinds ?? []);
+  if (!scope.ok) return scope;
+  const resources = scope.value;
+
   debug("loading definitions", { dir: args.dir });
   const loaded = await loadDefinitions(args.dir);
   if (!loaded.ok) {
     return { ok: false, stage: "load", error: describeLoadFailure(loaded.error) };
   }
-  const desired = loaded.value;
+  const desired = onlyKinds(loaded.value, resources);
   debug(
     "definitions loaded",
     Object.fromEntries(Array.from(desired.entries()).map(([k, v]) => [k, v.length])),
   );
 
   debug("validating definitions");
-  const validation = validate(desired);
+  const validation = validate(desired, resources);
   if (!validation.ok) {
     return {
       ok: false,
@@ -94,7 +99,7 @@ export async function buildApplyResult(
   }
   debug("validation passed");
 
-  const totalDesired = RESOURCES.reduce((sum, r) => sum + (desired.get(r.name)?.length ?? 0), 0);
+  const totalDesired = resources.reduce((sum, r) => sum + (desired.get(r.name)?.length ?? 0), 0);
   if (args.dryRun && totalDesired === 0) {
     return {
       ok: true,
@@ -110,7 +115,7 @@ export async function buildApplyResult(
     current = await fetchCurrentState(
       config,
       { verbose: args.verbose, prune: args.prune },
-      undefined,
+      resources,
       desired,
     );
   } catch (err) {
@@ -129,7 +134,7 @@ export async function buildApplyResult(
   );
 
   debug("diffing");
-  const diffResult = diff(desired, current);
+  const diffResult = diff(desired, current, resources);
 
   if (args.dryRun) {
     return {
@@ -142,10 +147,12 @@ export async function buildApplyResult(
 
   debug("executing apply", { prune: args.prune });
   try {
-    const summary = await execute(config, diffResult, {
-      verbose: args.verbose,
-      prune: args.prune,
-    });
+    const summary = await execute(
+      config,
+      diffResult,
+      { verbose: args.verbose, prune: args.prune },
+      resources,
+    );
     let totalCreated = 0;
     let totalUpdated = 0;
     let totalUnchanged = 0;
@@ -234,6 +241,46 @@ function emitApplyProse(
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+
+/**
+ * Narrow the run to `--kind`, keeping apply order. A kind's dependencies must be
+ * listed too: their executors are what put server ids in the apply context.
+ */
+function resolveKinds(
+  kinds: string[],
+): { ok: true; value: ReadonlyArray<ResourceModule<unknown, unknown>> } | ApplyErr {
+  if (kinds.length === 0) return { ok: true, value: RESOURCES };
+  const known = new Set(RESOURCES.map((r) => r.name));
+  for (const kind of kinds) {
+    if (!known.has(kind)) {
+      return {
+        ok: false,
+        stage: "args",
+        error: `--kind "${kind}" is not a resource kind. Kinds: ${[...known].join(", ")}.`,
+      };
+    }
+  }
+  const selected = RESOURCES.filter((r) => kinds.includes(r.name));
+  for (const resource of selected) {
+    const missing = (resource.dependsOn ?? []).filter((dep) => !kinds.includes(dep.name));
+    if (missing.length > 0) {
+      return {
+        ok: false,
+        stage: "args",
+        error: `--kind ${resource.name} also needs ${missing.map((d) => d.name).join(", ")}, which ${resource.name} depends on.`,
+      };
+    }
+  }
+  return { ok: true, value: selected };
+}
+
+function onlyKinds(
+  desired: DesiredState,
+  resources: ReadonlyArray<ResourceModule<unknown, unknown>>,
+): DesiredState {
+  const names = new Set(resources.map((r) => r.name));
+  return new Map([...desired].filter(([name]) => names.has(name)));
+}
 
 function planToJson(
   diffResult: DiffResult,

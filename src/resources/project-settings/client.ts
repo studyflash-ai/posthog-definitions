@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { ClientConfig } from "../../client/config.js";
+import { type ClientConfig, requestHeaders } from "../../client/config.js";
 import type { components } from "../../generated/api.js";
 import { ApiError } from "../../client/typed.js";
 
@@ -47,7 +47,7 @@ async function callEnvironment(
   const init: RequestInit = {
     method,
     headers: {
-      Authorization: `Bearer ${config.apiKey}`,
+      ...requestHeaders(config),
       ...(body !== undefined ? { "Content-Type": "application/json" } : {}),
     },
     ...(body !== undefined ? { body: JSON.stringify(body) } : {}),

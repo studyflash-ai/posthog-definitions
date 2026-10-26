@@ -75,6 +75,10 @@ export type ApplyContext = {
   experimentHoldoutIdByKey: Map<string, number>;
   /** Experiment-saved-metric server id by spec key. Populated by the experiment-saved-metric module's executor; read by the experiment module's resolver. */
   experimentSavedMetricIdByKey: Map<string, number>;
+  /** Cohort server id by spec key. Populated by the cohort module's executor; read by the feature-flag module to resolve cohort filters. */
+  cohortIdByKey: Map<string, number>;
+  /** Inverse of cohortIdByKey; populated when displaying server-side flag filters so we can show keys rather than ids. */
+  cohortKeyByServerId: Map<number, string>;
 };
 
 export function newApplyContext(): ApplyContext {
@@ -84,6 +88,8 @@ export function newApplyContext(): ApplyContext {
     propertyGroupIdByKey: new Map(),
     experimentHoldoutIdByKey: new Map(),
     experimentSavedMetricIdByKey: new Map(),
+    cohortIdByKey: new Map(),
+    cohortKeyByServerId: new Map(),
   };
 }
 

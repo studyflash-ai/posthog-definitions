@@ -10,8 +10,19 @@ import {
   type DisplayValue,
 } from "../../apply/display.js";
 import { SafetyViolationError } from "../../apply/errors.js";
-import { getResourceKind, type ApplyContext, type ResourceOp } from "../types.js";
-import type { FeatureFlag, FeatureFlagFilters, PropertyFilter } from "./sdk.js";
+import type { Cohort } from "../cohort/sdk.js";
+import {
+  getResourceKind,
+  type ApplyContext,
+  type DesiredState,
+  type ResourceOp,
+} from "../types.js";
+import type {
+  FeatureFlag,
+  FeatureFlagFilters,
+  PropertyFilter,
+  ReleaseConditionGroup,
+} from "./sdk.js";
 import {
   createFeatureFlag,
   deleteFeatureFlag,
@@ -60,11 +71,60 @@ function mergeTags(userTags: string[] | undefined, managedTags: string[]): strin
   return result;
 }
 
-export function featureFlagPayload(spec: FeatureFlag, hash: string): FeatureFlagCreate {
+function cohortRef(property: PropertyFilter): Cohort | undefined {
+  if (property.type !== "cohort" || getResourceKind(property.value) !== "cohort") return undefined;
+  return property.value as Cohort;
+}
+
+/** Rewrites each `cohort()` reference in the filters; returns the same object when there are none. */
+function mapCohortRefs(
+  filters: FeatureFlagFilters,
+  replace: (cohort: Cohort) => unknown,
+): FeatureFlagFilters {
+  if (!collectPropertyFilters(filters).some((p) => cohortRef(p))) return filters;
+  const mapGroup = (group: ReleaseConditionGroup): ReleaseConditionGroup =>
+    group.properties
+      ? {
+          ...group,
+          properties: group.properties.map((property) => {
+            const cohort = cohortRef(property);
+            return cohort ? { ...property, value: replace(cohort) } : property;
+          }),
+        }
+      : group;
+  return {
+    ...filters,
+    groups: filters.groups.map(mapGroup),
+    ...(filters.super_groups ? { super_groups: filters.super_groups.map(mapGroup) } : {}),
+  };
+}
+
+/** Filters with cohort references by key, so the hash is the same on every project. */
+function filtersByCohortKey(filters: FeatureFlagFilters): FeatureFlagFilters {
+  return mapCohortRefs(filters, (cohort) => ({ cohort: cohort.key }));
+}
+
+export function resolveCohortRefs(spec: FeatureFlag, ctx: ApplyContext): FeatureFlagFilters {
+  return mapCohortRefs(spec.filters, (cohort) => {
+    const id = ctx.cohortIdByKey.get(cohort.key);
+    if (id === undefined) {
+      throw new Error(
+        `feature flag "${spec.key}" references cohort "${cohort.key}" but no server id is known. Cohorts must run before feature flags.`,
+      );
+    }
+    return id;
+  });
+}
+
+export function featureFlagPayload(
+  spec: FeatureFlag,
+  hash: string,
+  filters: FeatureFlagFilters = spec.filters,
+): FeatureFlagCreate {
   const payload: FeatureFlagCreate = {
     key: spec.key,
     name: spec.name ?? "",
-    filters: spec.filters as unknown as Record<string, unknown>,
+    filters: filters as unknown as Record<string, unknown>,
     active: spec.active ?? true,
     tags: mergeTags(spec.tags, [featureFlagTag(spec.key), hashTag(hash)]),
   };
@@ -91,7 +151,7 @@ function featureFlagSpecForHash(spec: FeatureFlag): unknown {
     key: spec.key,
     name: spec.name ?? "",
     active: spec.active ?? true,
-    filters: spec.filters,
+    filters: filtersByCohortKey(spec.filters),
     ensure_experience_continuity: spec.ensure_experience_continuity ?? false,
     is_remote_configuration: spec.is_remote_configuration ?? false,
     has_encrypted_payloads: spec.has_encrypted_payloads ?? false,
@@ -120,9 +180,14 @@ function collectPropertyFilters(filters: FeatureFlagFilters): PropertyFilter[] {
   return all;
 }
 
-export function validateFeatureFlags(specs: FeatureFlag[]): string[] {
+export function validateFeatureFlags(specs: FeatureFlag[], state?: DesiredState): string[] {
   const issues: string[] = [];
   const seen = new Set<string>();
+  const knownCohortKeys = new Set<string>();
+  for (const loaded of state?.get("cohorts") ?? []) {
+    const cohort = loaded.spec as Cohort;
+    if (cohort?.key) knownCohortKeys.add(cohort.key);
+  }
   for (const spec of specs) {
     if (!spec.key) {
       issues.push("featureFlag.key is required");
@@ -169,6 +234,15 @@ export function validateFeatureFlags(specs: FeatureFlag[]): string[] {
         break;
       }
     }
+
+    for (const property of collectPropertyFilters(spec.filters)) {
+      const cohort = cohortRef(property);
+      if (cohort && !knownCohortKeys.has(cohort.key)) {
+        issues.push(
+          `feature flag "${spec.key}" references unknown cohort "${cohort.key}" — declare it with cohort({ key: "${cohort.key}", … })`,
+        );
+      }
+    }
   }
   return issues;
 }
@@ -188,12 +262,16 @@ async function assertManagedFeatureFlag(
 export async function runFeatureFlagOp(
   config: ClientConfig,
   op: ResourceOp<FeatureFlag, ServerFeatureFlag>,
-  _ctx: ApplyContext,
+  ctx: ApplyContext,
   options: { verbose?: boolean } = {},
 ): Promise<void> {
   if (op.kind === "unchanged") return;
 
-  const payload = featureFlagPayload(op.spec, featureFlagHash(op.spec));
+  const payload = featureFlagPayload(
+    op.spec,
+    featureFlagHash(op.spec),
+    resolveCohortRefs(op.spec, ctx),
+  );
 
   if (op.kind === "create") {
     await createFeatureFlag(config, payload, options);
@@ -225,7 +303,7 @@ export function displayFeatureFlag(spec: FeatureFlag): DisplayValue {
     ["key", scalar(spec.key)],
     ["name", scalar(spec.name ?? "")],
     ["active", scalar(spec.active ?? true)],
-    ["filters", displayJson(spec.filters)],
+    ["filters", displayJson(filtersByCohortKey(spec.filters))],
     ["ensure_experience_continuity", scalar(spec.ensure_experience_continuity ?? false)],
     ["is_remote_configuration", scalar(spec.is_remote_configuration ?? false)],
     ["evaluation_runtime", scalar(spec.evaluation_runtime ?? "all")],
@@ -234,12 +312,35 @@ export function displayFeatureFlag(spec: FeatureFlag): DisplayValue {
   ]);
 }
 
-export function displayFeatureFlagFromServer(server: ServerFeatureFlag): DisplayValue {
+/** Server filters with known cohort ids shown as keys, matching how the spec side displays them. */
+function serverFiltersByCohortKey(filters: unknown, ctx?: ApplyContext): unknown {
+  if (!ctx || ctx.cohortKeyByServerId.size === 0) return filters;
+  const f = filters as FeatureFlagFilters | null | undefined;
+  if (!f || !Array.isArray(f.groups)) return filters;
+  const mapGroup = (group: ReleaseConditionGroup): ReleaseConditionGroup => ({
+    ...group,
+    properties: (group.properties ?? []).map((property) => {
+      if (property.type !== "cohort" || typeof property.value !== "number") return property;
+      const key = ctx.cohortKeyByServerId.get(property.value);
+      return key ? { ...property, value: { cohort: key } } : property;
+    }),
+  });
+  return {
+    ...f,
+    groups: f.groups.map(mapGroup),
+    ...(f.super_groups ? { super_groups: f.super_groups.map(mapGroup) } : {}),
+  };
+}
+
+export function displayFeatureFlagFromServer(
+  server: ServerFeatureFlag,
+  ctx?: ApplyContext,
+): DisplayValue {
   return obj([
     ["key", scalar(server.key)],
     ["name", scalar(server.name ?? "")],
     ["active", scalar(server.active)],
-    ["filters", displayJson(server.filters)],
+    ["filters", displayJson(serverFiltersByCohortKey(server.filters, ctx))],
     ["ensure_experience_continuity", scalar(server.ensure_experience_continuity ?? false)],
     ["is_remote_configuration", scalar(server.is_remote_configuration ?? false)],
     ["evaluation_runtime", scalar(server.evaluation_runtime ?? "all")],

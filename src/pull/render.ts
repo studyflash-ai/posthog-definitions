@@ -38,8 +38,18 @@ export function formatKey(key: string): string {
   return /^[a-zA-Z_$][\w$]*$/.test(key) ? key : stringLiteral(key);
 }
 
+/** A TS expression (e.g. an imported spec's identifier) that `renderRawLiteral` emits verbatim. */
+export class RawExpression {
+  constructor(readonly code: string) {}
+}
+
 export function isObject(value: unknown): value is Record<string, unknown> {
-  return !!value && typeof value === "object" && !Array.isArray(value);
+  return (
+    !!value &&
+    typeof value === "object" &&
+    !Array.isArray(value) &&
+    !(value instanceof RawExpression)
+  );
 }
 
 /**
@@ -48,6 +58,7 @@ export function isObject(value: unknown): value is Record<string, unknown> {
  * etc.) without bespoke renderers.
  */
 export function renderRawLiteral(value: unknown, indent: number): string {
+  if (value instanceof RawExpression) return value.code;
   if (value === null) return "null";
   if (value === undefined) return "undefined";
   if (typeof value === "string") return stringLiteral(value);

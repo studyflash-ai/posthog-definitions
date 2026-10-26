@@ -147,20 +147,25 @@ async function assertManagedCohort(
 export async function runCohortOp(
   config: ClientConfig,
   op: ResourceOp<Cohort, ServerCohort>,
-  _ctx: ApplyContext,
+  ctx: ApplyContext,
   options: { verbose?: boolean } = {},
 ): Promise<void> {
-  if (op.kind === "unchanged") return;
+  if (op.kind === "unchanged") {
+    ctx.cohortIdByKey.set(op.spec.key, op.server.id);
+    return;
+  }
 
   const payload = cohortPayload(op.spec, cohortHash(op.spec));
 
   if (op.kind === "create") {
-    await createCohort(config, payload, options);
+    const created = await createCohort(config, payload, options);
+    ctx.cohortIdByKey.set(op.spec.key, created.id);
     return;
   }
 
   await assertManagedCohort(config, op.server.id, op.spec.key, options);
-  await updateCohort(config, op.server.id, payload, options);
+  const updated = await updateCohort(config, op.server.id, payload, options);
+  ctx.cohortIdByKey.set(op.spec.key, updated.id);
 }
 
 export async function pruneCohort(

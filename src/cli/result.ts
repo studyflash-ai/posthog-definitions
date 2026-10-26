@@ -51,7 +51,7 @@ export type ApplyOkApplied = {
 export type ApplyErr = {
   ok: false;
   /** Where in the pipeline the error occurred. */
-  stage: "config" | "load" | "validate" | "fetch" | "apply";
+  stage: "config" | "args" | "load" | "validate" | "fetch" | "apply";
   /** Short human-readable error message. Suitable for `error: …` prose output. */
   error: string;
   /** Validation issues, populated when stage === "validate". */

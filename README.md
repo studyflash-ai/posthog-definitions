@@ -59,6 +59,7 @@ export default dashboard({
    POSTHOG_PERSONAL_API_KEY=phx_...
    POSTHOG_PROJECT_ID=000000
    # POSTHOG_HOST=https://eu.posthog.com   # optional, defaults to us.posthog.com
+   # POSTHOG_EXTRA_HEADERS={"CF-Access-Client-Id":"…"}   # optional, sent with every request
    ```
 
    See `.envrc.example` in the repo for a copy-paste starting point.
@@ -72,6 +73,7 @@ export default dashboard({
    ```
    npx posthog-definitions apply
    ```
+   `--kind cohorts,feature-flags` limits the run to those kinds, e.g. to apply the same files to a second project that should only get some of them.
 5. **Commit** the `.ts` files.
 
 To bootstrap from an existing project, `npx posthog-definitions pull` writes definition files for the dashboards already on the server.

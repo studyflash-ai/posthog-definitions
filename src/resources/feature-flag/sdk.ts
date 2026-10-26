@@ -3,6 +3,10 @@ import { markResourceKind } from "../types.js";
 export type PropertyFilter = {
   key: string;
   type: "person" | "cohort" | "group" | "flag";
+  /**
+   * For `type: "cohort"`, a `cohort()` spec (resolved to the cohort's id on
+   * whichever project you apply to) or a literal server id.
+   */
   value?: unknown;
   operator?: string;
   group_type_index?: number;
