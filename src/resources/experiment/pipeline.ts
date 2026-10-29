@@ -72,8 +72,8 @@ function desiredLifecycle(spec: Experiment): ExperimentLifecycle {
 }
 
 function currentLifecycle(server: ServerExperiment): ExperimentLifecycle {
-  // The server returns `status` as the computed lifecycle; we trust it.
-  return server.status ?? "draft";
+  // The server returns `status` as the computed lifecycle; we trust it. Without one, the dates say it.
+  return server.status ?? (server.end_date ? "stopped" : server.start_date ? "running" : "draft");
 }
 
 function specForHash(spec: Experiment): unknown {
@@ -156,6 +156,10 @@ function buildCreatePayload(spec: Experiment, hash: string, ctx: ApplyContext): 
   if (savedMetrics.length > 0) payload.saved_metrics_ids = savedMetrics;
   if (spec.conclusion !== undefined) payload.conclusion = spec.conclusion;
   if (spec.conclusionComment !== undefined) payload.conclusion_comment = spec.conclusionComment;
+  // A start date launches the experiment as it is created, backdated; with an end date it lands
+  // stopped. Neither is in the hash or the patch body, so existing experiments keep their dates.
+  if (spec.startDate !== undefined) payload.start_date = spec.startDate;
+  if (spec.endDate !== undefined) payload.end_date = spec.endDate;
   // `archived` is reached via the archive/unarchive actions, not the PATCH body.
   return payload;
 }
@@ -275,6 +279,14 @@ export function validateExperiments(
     if (spec.archived && lifecycle !== "stopped") {
       issues.push(`experiment "${spec.key}" can only be archived once lifecycle is "stopped"`);
     }
+    const start = spec.startDate === undefined ? undefined : Date.parse(spec.startDate);
+    const end = spec.endDate === undefined ? undefined : Date.parse(spec.endDate);
+    if (start !== undefined && (Number.isNaN(start) || lifecycle === "draft")) {
+      issues.push(`experiment "${spec.key}" startDate must be an ISO 8601 timestamp on a launched experiment`);
+    }
+    if (end !== undefined && (Number.isNaN(end) || lifecycle !== "stopped" || start === undefined || end <= start)) {
+      issues.push(`experiment "${spec.key}" endDate must be an ISO 8601 timestamp after startDate on a stopped experiment`);
+    }
 
     // Multivariate split check, if variants are declared.
     const variants = spec.parameters?.feature_flag_variants;
@@ -368,7 +380,8 @@ export async function runExperimentOp(
 
   const hash = experimentHash(op.spec);
   if (op.kind === "create") {
-    // Always create as draft. Lifecycle transitions happen afterwards.
+    // Created as a draft, or already launched (and ended) when the spec has dates. Lifecycle
+    // transitions happen afterwards.
     const created = await createExperiment(
       config,
       buildCreatePayload(op.spec, hash, ctx),
@@ -377,7 +390,7 @@ export async function runExperimentOp(
     await applyLifecycleTransition(
       config,
       created.id,
-      "draft",
+      currentLifecycle(created),
       desiredLc,
       op.spec.conclusion,
       options,

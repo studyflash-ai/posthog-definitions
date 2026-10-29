@@ -50,9 +50,11 @@ export type ExperimentCreate = {
   archived?: boolean;
   conclusion?: "won" | "lost" | "inconclusive" | "stopped_early" | "invalid";
   conclusion_comment?: string | null;
+  start_date?: string;
+  end_date?: string;
 };
 
-export type ExperimentUpdate = Partial<Omit<ExperimentCreate, "feature_flag_key">>;
+export type ExperimentUpdate = Partial<Omit<ExperimentCreate, "feature_flag_key" | "start_date" | "end_date">>;
 
 type ExperimentBody = components["schemas"]["Experiment"];
 type PatchedBody = components["schemas"]["PatchedExperimentWrite"];
