@@ -138,8 +138,17 @@ function resolveSavedMetricIds(spec: Experiment, ctx: ApplyContext): SavedMetric
   return refs;
 }
 
+/** `parameters` keys the server keeps on the flag itself; it rejects them when creating against an existing flag. */
+const FLAG_CONFIG_PARAMETER_KEYS: readonly string[] = [
+  "feature_flag_variants",
+  "rollout_percentage",
+  "aggregation_group_type_index",
+  "feature_flag_payloads",
+  "ensure_experience_continuity",
+];
+
 /** Build the create payload (used only for the initial POST). */
-function buildCreatePayload(spec: Experiment, hash: string, ctx: ApplyContext): ExperimentCreate {
+export function buildCreatePayload(spec: Experiment, hash: string, ctx: ApplyContext): ExperimentCreate {
   const holdoutId = resolveHoldoutId(spec, ctx);
   const savedMetrics = resolveSavedMetricIds(spec, ctx);
   const payload: ExperimentCreate = {
@@ -148,7 +157,11 @@ function buildCreatePayload(spec: Experiment, hash: string, ctx: ApplyContext): 
     feature_flag_key: spec.featureFlag.key,
   };
   if (spec.type !== undefined) payload.type = spec.type;
-  if (spec.parameters !== undefined) payload.parameters = spec.parameters as Record<string, unknown>;
+  // Feature flags apply before experiments, so the flag always exists here and the server links it as-is.
+  const parameters = Object.fromEntries(
+    Object.entries(spec.parameters ?? {}).filter(([key]) => !FLAG_CONFIG_PARAMETER_KEYS.includes(key)),
+  );
+  if (Object.keys(parameters).length > 0) payload.parameters = parameters;
   if (spec.metrics !== undefined) payload.metrics = spec.metrics;
   if (spec.metrics_secondary !== undefined) payload.metrics_secondary = spec.metrics_secondary;
   if (spec.exposure_criteria !== undefined) payload.exposure_criteria = spec.exposure_criteria;

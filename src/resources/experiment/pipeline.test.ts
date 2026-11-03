@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { diff } from "../../apply/diff.js";
-import type { DesiredState } from "../types.js";
+import { newApplyContext, type DesiredState } from "../types.js";
 import { featureFlag, type FeatureFlag } from "../feature-flag/sdk.js";
 import { experimentHoldout } from "../experiment-holdout/sdk.js";
 import { experimentSavedMetric } from "../experiment-saved-metric/sdk.js";
 import { experiment, type Experiment } from "./sdk.js";
 import type { ServerExperiment } from "./client.js";
-import { experimentHash, validateExperiments } from "./pipeline.js";
+import { buildCreatePayload, experimentHash, validateExperiments } from "./pipeline.js";
 
 const flag: FeatureFlag = featureFlag({
   key: "my-flag",
@@ -145,6 +145,25 @@ describe("experiment pipeline", () => {
       diff(desiredFor({ experiments: [dated] }), currentFor([server])).get("experiments")!.ops[0]!
         .kind,
     ).toBe("unchanged");
+  });
+
+  it("create leaves the flag's own config out of parameters", () => {
+    const exp = spec("onboarding", {
+      parameters: {
+        feature_flag_variants: [
+          { key: "control", rollout_percentage: 50 },
+          { key: "test", rollout_percentage: 50 },
+        ],
+        rollout_percentage: 100,
+        minimum_detectable_effect: 5,
+      },
+    });
+    const payload = buildCreatePayload(exp, experimentHash(exp), newApplyContext());
+    expect(payload.parameters).toEqual({ minimum_detectable_effect: 5 });
+    const flagOnly = spec("onboarding", { parameters: { rollout_percentage: 100 } });
+    expect(buildCreatePayload(flagOnly, experimentHash(flagOnly), newApplyContext())).not.toHaveProperty(
+      "parameters",
+    );
   });
 
   it("safety invariant: ignores rows without marker", () => {
