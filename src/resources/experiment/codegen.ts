@@ -1,7 +1,13 @@
 import type { ClientConfig } from "../../client/config.js";
-import { renderObject, renderRawLiteral, stringLiteral } from "../../pull/render.js";
+import { RawExpression, renderObject, renderRawLiteral, stringLiteral } from "../../pull/render.js";
 import { slugify } from "../../pull/slug.js";
-import type { PullDependency, PullRenderContext, RenderedFile } from "../../pull/types.js";
+import type {
+  ImportEntry,
+  PullDependency,
+  PullRenderContext,
+  RenderedFile,
+} from "../../pull/types.js";
+import { cohortFilterValues, mapCohortFilters } from "../cohort/refs.js";
 import { type ServerExperiment, updateExperiment } from "./client.js";
 import type { Experiment } from "./sdk.js";
 
@@ -26,8 +32,9 @@ export function serverIdOf(server: ServerExperiment): number {
 
 /**
  * Experiment depends on feature-flag (by id from the loose `feature_flag` echo),
- * optionally a holdout (`holdout_id`), and zero-or-more saved metrics (each row
- * in `saved_metrics` has a `saved_metric` FK to the metric id).
+ * optionally a holdout (`holdout_id`), zero-or-more saved metrics (each row
+ * in `saved_metrics` has a `saved_metric` FK to the metric id), and the cohorts
+ * its metrics and exposure criteria filter on.
  */
 export async function pullDependencies(
   _config: ClientConfig,
@@ -46,7 +53,34 @@ export async function pullDependencies(
       deps.push({ resourceName: "experiment-saved-metrics", serverId: metricId });
     }
   }
+  const cohortIds = new Set(
+    [server.metrics, server.metrics_secondary, server.exposure_criteria]
+      .flatMap(cohortFilterValues)
+      .filter((value): value is number => typeof value === "number"),
+  );
+  for (const serverId of cohortIds) deps.push({ resourceName: "cohorts", serverId });
   return deps;
+}
+
+/** Swaps each pulled cohort's id for its import; ids of cohorts that weren't pulled stay literal. */
+function withCohortImports(
+  value: unknown,
+  server: ServerExperiment,
+  ctx: PullRenderContext,
+  imports: Map<string, ImportEntry>,
+): unknown {
+  return mapCohortFilters(value, (filterValue) => {
+    if (typeof filterValue !== "number") return filterValue;
+    const entry = ctx.importForServerIdOptional("cohorts", filterValue);
+    if (!entry) {
+      ctx.warn(
+        `Experiment "${server.name}" filters on cohort id=${filterValue}, which wasn't pulled; it stays a literal id, which apply rejects. Pull the cohort too.`,
+      );
+      return filterValue;
+    }
+    imports.set(entry.varName, entry);
+    return new RawExpression(entry.varName);
+  });
 }
 
 export function renderToFile(
@@ -124,14 +158,24 @@ export function renderToFile(
   if (server.parameters !== undefined && server.parameters !== null) {
     fields.parameters = renderRawLiteral(server.parameters, 2);
   }
+  const cohortImports = new Map<string, ImportEntry>();
   if (Array.isArray(server.metrics) && server.metrics.length > 0) {
-    fields.metrics = renderRawLiteral(server.metrics, 2);
+    fields.metrics = renderRawLiteral(
+      withCohortImports(server.metrics, server, ctx, cohortImports),
+      2,
+    );
   }
   if (Array.isArray(server.metrics_secondary) && server.metrics_secondary.length > 0) {
-    fields.metrics_secondary = renderRawLiteral(server.metrics_secondary, 2);
+    fields.metrics_secondary = renderRawLiteral(
+      withCohortImports(server.metrics_secondary, server, ctx, cohortImports),
+      2,
+    );
   }
   if (server.exposure_criteria !== undefined && server.exposure_criteria !== null) {
-    fields.exposure_criteria = renderRawLiteral(server.exposure_criteria, 2);
+    fields.exposure_criteria = renderRawLiteral(
+      withCohortImports(server.exposure_criteria, server, ctx, cohortImports),
+      2,
+    );
   }
   if (primaryMetricImports.length > 0) {
     fields.primarySavedMetrics = `[${primaryMetricImports.map((m) => m.varName).join(", ")}]`;
@@ -156,6 +200,11 @@ export function renderToFile(
   for (const m of [...primaryMetricImports, ...secondaryMetricImports]) {
     parts.push(
       `import ${m.varName} from "../experiment-saved-metrics/${m.filename.replace(/\.ts$/, ".js")}";`,
+    );
+  }
+  for (const entry of cohortImports.values()) {
+    parts.push(
+      `import ${entry.varName} from "../cohorts/${entry.filename.replace(/\.ts$/, ".js")}";`,
     );
   }
   parts.push("");
