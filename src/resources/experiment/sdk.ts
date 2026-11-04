@@ -54,6 +54,15 @@ export type Experiment = {
    * rejected at validate time.
    */
   lifecycle?: ExperimentLifecycle;
+  /**
+   * When the experiment started, as an ISO 8601 timestamp. Apply sends it only
+   * when it creates the experiment, so a copy in another project or instance
+   * launches at the original's start instead of at apply time. It never changes
+   * the start of an experiment that already exists.
+   */
+  startDate?: string;
+  /** When a `stopped` experiment ended. Create-only, like `startDate`. */
+  endDate?: string;
   /** Whether the experiment is archived (orthogonal to lifecycle). */
   archived?: boolean;
   /** Optional reference to an experiment holdout group. */

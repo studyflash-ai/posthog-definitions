@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { diff } from "../../apply/diff.js";
-import type { DesiredState } from "../types.js";
+import { newApplyContext, type DesiredState } from "../types.js";
 import { featureFlag, type FeatureFlag } from "../feature-flag/sdk.js";
 import { experimentHoldout } from "../experiment-holdout/sdk.js";
 import { experimentSavedMetric } from "../experiment-saved-metric/sdk.js";
 import { experiment, type Experiment } from "./sdk.js";
 import type { ServerExperiment } from "./client.js";
-import { experimentHash, validateExperiments } from "./pipeline.js";
+import { buildCreatePayload, experimentHash, validateExperiments } from "./pipeline.js";
 
 const flag: FeatureFlag = featureFlag({
   key: "my-flag",
@@ -131,6 +131,41 @@ describe("experiment pipeline", () => {
     expect(experimentHash(desiredDraft)).not.toBe(experimentHash(desiredRunning));
   });
 
+  it("dates are create-only: adding them leaves an existing experiment unchanged", () => {
+    const undated = spec("onboarding", { lifecycle: "stopped", conclusion: "won" });
+    const dated = spec("onboarding", {
+      lifecycle: "stopped",
+      conclusion: "won",
+      startDate: "2026-10-09T20:07:06Z",
+      endDate: "2026-10-19T07:28:04Z",
+    });
+    expect(experimentHash(dated)).toBe(experimentHash(undated));
+    const server = serverRow(11, "onboarding", experimentHash(undated), { status: "stopped" });
+    expect(
+      diff(desiredFor({ experiments: [dated] }), currentFor([server])).get("experiments")!.ops[0]!
+        .kind,
+    ).toBe("unchanged");
+  });
+
+  it("create leaves the flag's own config out of parameters", () => {
+    const exp = spec("onboarding", {
+      parameters: {
+        feature_flag_variants: [
+          { key: "control", rollout_percentage: 50 },
+          { key: "test", rollout_percentage: 50 },
+        ],
+        rollout_percentage: 100,
+        minimum_detectable_effect: 5,
+      },
+    });
+    const payload = buildCreatePayload(exp, experimentHash(exp), newApplyContext());
+    expect(payload.parameters).toEqual({ minimum_detectable_effect: 5 });
+    const flagOnly = spec("onboarding", { parameters: { rollout_percentage: 100 } });
+    expect(buildCreatePayload(flagOnly, experimentHash(flagOnly), newApplyContext())).not.toHaveProperty(
+      "parameters",
+    );
+  });
+
   it("safety invariant: ignores rows without marker", () => {
     const handBuilt: ServerExperiment = {
       id: 99,
@@ -201,6 +236,45 @@ describe("experiment validation", () => {
       desiredFor({ experiments: [exp], savedMetrics: [] }),
     );
     expect(issues.some((m) => m.includes("unknown experiment saved metric"))).toBeTruthy();
+  });
+
+  it("rejects a startDate on a draft or one that isn't a timestamp", () => {
+    for (const exp of [
+      spec("onboarding", { startDate: "2026-10-09T20:07:06Z" }),
+      spec("onboarding", { lifecycle: "running", startDate: "last tuesday" }),
+    ]) {
+      const issues = validateExperiments([exp], desiredFor({ experiments: [exp] }));
+      expect(issues.some((m) => m.includes("startDate must be"))).toBeTruthy();
+    }
+  });
+
+  it("rejects an endDate unless a stopped experiment starts before it", () => {
+    for (const exp of [
+      spec("onboarding", { lifecycle: "running", startDate: "2026-10-09T20:07:06Z", endDate: "2026-10-19T00:00:00Z" }),
+      spec("onboarding", { lifecycle: "stopped", conclusion: "won", endDate: "2026-10-19T00:00:00Z" }),
+      spec("onboarding", {
+        lifecycle: "stopped",
+        conclusion: "won",
+        startDate: "2026-10-19T00:00:00Z",
+        endDate: "2026-10-09T20:07:06Z",
+      }),
+    ]) {
+      const issues = validateExperiments([exp], desiredFor({ experiments: [exp] }));
+      expect(issues.some((m) => m.includes("endDate must be"))).toBeTruthy();
+    }
+  });
+
+  it("accepts dates on a running and a stopped experiment", () => {
+    const running = spec("running-one", { lifecycle: "running", startDate: "2026-10-09T20:07:06.275Z" });
+    const stopped = spec("stopped-one", {
+      lifecycle: "stopped",
+      conclusion: "won",
+      startDate: "2026-10-09T20:07:06Z",
+      endDate: "2026-10-19T07:28:04Z",
+    });
+    expect(
+      validateExperiments([running, stopped], desiredFor({ experiments: [running, stopped] })),
+    ).toEqual([]);
   });
 
   it("accepts a minimal valid spec", () => {
