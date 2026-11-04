@@ -212,3 +212,44 @@ describe("experiment codegen", () => {
     expect(result.contents).not.toContain("iac:");
   });
 });
+
+describe("experiment codegen cohort references", () => {
+  const exposure = {
+    exposure_config: {
+      kind: "ExperimentEventExposureConfig",
+      event: "jev_exposure",
+      properties: [{ key: "id", type: "cohort", value: 25969, operator: "not_in" }],
+    },
+  };
+
+  it("pullDependencies includes the cohorts the experiment filters on", async () => {
+    const deps = await pullDependencies({} as never, experimentRow({ exposure_criteria: exposure }));
+    expect(deps).toContainEqual({ resourceName: "cohorts", serverId: 25969 });
+  });
+
+  it("renderToFile imports a pulled cohort instead of writing its id", () => {
+    const imports = new Map<string, Map<string, ImportEntry>>([
+      ["feature-flags", flagImport(200, "signup-cta-test")],
+      [
+        "cohorts",
+        new Map([[
+          "25969",
+          { key: "internal-users", varName: "internal_users", filename: "internal-users.ts", resourceName: "cohorts" },
+        ]]),
+      ],
+    ]);
+    const result = renderToFile(experimentRow({ exposure_criteria: exposure }), makeCtx(imports));
+    if ("skipped" in result) throw new Error("Unexpected skip");
+    expect(result.contents).toContain('import internal_users from "../cohorts/internal-users.js";');
+    expect(result.contents).toContain("value: internal_users");
+    expect(result.contents).not.toContain("25969");
+  });
+
+  it("keeps the id and warns when the cohort wasn't pulled", () => {
+    const ctx = makeCtx(new Map([["feature-flags", flagImport(200, "signup-cta-test")]]));
+    const result = renderToFile(experimentRow({ exposure_criteria: exposure }), ctx);
+    if ("skipped" in result) throw new Error("Unexpected skip");
+    expect(result.contents).toContain("25969");
+    expect(ctx.warnings.some((w) => w.includes("cohort id=25969"))).toBe(true);
+  });
+});

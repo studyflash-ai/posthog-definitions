@@ -1,4 +1,6 @@
 import type { ApplyContext, CollectionResourceModule } from "../types.js";
+import type { ServerCohort } from "../cohort/client.js";
+import { cohortResource } from "../cohort/index.js";
 import { experimentHoldoutResource } from "../experiment-holdout/index.js";
 import { experimentSavedMetricResource } from "../experiment-saved-metric/index.js";
 import { featureFlagResource } from "../feature-flag/index.js";
@@ -7,6 +9,7 @@ import {
   displayExperiment,
   displayExperimentFromServer,
   EXPERIMENT_IDENTITY_PREFIX,
+  experimentCohortRefsStale,
   experimentHash,
   experimentHashFromServer,
   experimentKeyFromServer,
@@ -47,7 +50,12 @@ export const experimentResource: CollectionResourceModule<Experiment, ServerExpe
   name: "experiments",
   displayName: "experiment",
   identityPrefix: EXPERIMENT_IDENTITY_PREFIX,
-  dependsOn: [featureFlagResource, experimentHoldoutResource, experimentSavedMetricResource],
+  dependsOn: [
+    cohortResource,
+    featureFlagResource,
+    experimentHoldoutResource,
+    experimentSavedMetricResource,
+  ],
 
   isSpec: looksLikeExperiment,
   specKey: (spec) => spec.key,
@@ -57,12 +65,18 @@ export const experimentResource: CollectionResourceModule<Experiment, ServerExpe
   hashFromServer: (server) => experimentHashFromServer(server),
 
   hash: experimentHash,
+  isStale: (spec, server, current) =>
+    experimentCohortRefsStale(
+      spec,
+      server,
+      (current.get(cohortResource.name) ?? []) as ServerCohort[],
+    ),
   validate: (specs, state) => validateExperiments(specs, state),
   executeOp: runExperimentOp,
   prune: pruneExperiment,
 
   displaySpec: (spec, _ctx: ApplyContext) => displayExperiment(spec),
-  displayServer: (server, _ctx: ApplyContext) => displayExperimentFromServer(server),
+  displayServer: (server, ctx: ApplyContext) => displayExperimentFromServer(server, ctx),
 
   listAll: listExperiments,
   getById: (config, id, options) => getExperiment(config, Number(id), options),

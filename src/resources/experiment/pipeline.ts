@@ -4,6 +4,10 @@ import { specHash } from "../../apply/hash.js";
 import { arr, displayJson, obj, scalar, type DisplayValue } from "../../apply/display.js";
 import { SafetyViolationError } from "../../apply/errors.js";
 import { getResourceKind, type ApplyContext, type DesiredState, type ResourceOp } from "../types.js";
+import type { ServerCohort } from "../cohort/client.js";
+import { cohortKeyFromServer } from "../cohort/pipeline.js";
+import { cohortFilterValues, isCohortSpec, mapCohortFilters } from "../cohort/refs.js";
+import type { Cohort } from "../cohort/sdk.js";
 import type { ExperimentHoldout } from "../experiment-holdout/sdk.js";
 import type { ExperimentSavedMetric } from "../experiment-saved-metric/sdk.js";
 import type { FeatureFlag } from "../feature-flag/sdk.js";
@@ -76,10 +80,63 @@ function currentLifecycle(server: ServerExperiment): ExperimentLifecycle {
   return server.status ?? (server.end_date ? "stopped" : server.start_date ? "running" : "draft");
 }
 
+type FilterFields = Pick<Experiment, "metrics" | "metrics_secondary" | "exposure_criteria">;
+
+/** The fields that can hold `type: "cohort"` filters, with each filter's value rewritten. */
+function mapFilterFields(spec: Experiment, replace: (value: unknown) => unknown): FilterFields {
+  return {
+    metrics: mapCohortFilters(spec.metrics, replace) as FilterFields["metrics"],
+    metrics_secondary: mapCohortFilters(spec.metrics_secondary, replace) as FilterFields["metrics_secondary"],
+    exposure_criteria: mapCohortFilters(spec.exposure_criteria, replace) as FilterFields["exposure_criteria"],
+  };
+}
+
+function specCohortFilterValues(spec: FilterFields): unknown[] {
+  return [spec.metrics, spec.metrics_secondary, spec.exposure_criteria].flatMap(cohortFilterValues);
+}
+
+/** Filters with cohort references by key, so the hash and the plan are the same on every project. */
+function filtersByCohortKey(spec: Experiment): FilterFields {
+  return mapFilterFields(spec, (value) => (isCohortSpec(value) ? { cohort: value.key } : value));
+}
+
+export function resolveCohortRefs(spec: Experiment, ctx: ApplyContext): FilterFields {
+  return mapFilterFields(spec, (value) => {
+    if (!isCohortSpec(value)) return value;
+    const id = ctx.cohortIdByKey.get(value.key);
+    if (id === undefined) {
+      throw new Error(
+        `experiment "${spec.key}" references cohort "${value.key}" but no server id is known. Cohorts must run before experiments.`,
+      );
+    }
+    return id;
+  });
+}
+
+/** Whether the server's experiment filters on other cohorts than the spec's references point at on this project. */
+export function experimentCohortRefsStale(
+  spec: Experiment,
+  server: ServerExperiment,
+  cohorts: ServerCohort[],
+): boolean {
+  if (!specCohortFilterValues(spec).some(isCohortSpec)) return false;
+  const idByKey = new Map<string, number>();
+  for (const row of cohorts) {
+    const key = cohortKeyFromServer(row);
+    if (key) idByKey.set(key, row.id);
+  }
+  const wanted = mapFilterFields(spec, (value) =>
+    isCohortSpec(value) ? (idByKey.get(value.key) ?? null) : value,
+  );
+  const values = (fields: FilterFields) => specCohortFilterValues(fields).map(String).sort();
+  return JSON.stringify(values(wanted)) !== JSON.stringify(values(server as FilterFields));
+}
+
 function specForHash(spec: Experiment): unknown {
   // Everything that round-trips, EXCLUDING server-resolved ids and managed marker.
   // Cross-resource references are hashed by KEY, not server id, so the hash is
   // environment-portable.
+  const filters = filtersByCohortKey(spec);
   return {
     key: spec.key,
     name: spec.name,
@@ -90,9 +147,9 @@ function specForHash(spec: Experiment): unknown {
     feature_flag_key: spec.featureFlag.key,
     holdout_key: spec.holdout?.key ?? null,
     parameters: spec.parameters ?? null,
-    metrics: spec.metrics ?? [],
-    metrics_secondary: spec.metrics_secondary ?? [],
-    exposure_criteria: spec.exposure_criteria ?? null,
+    metrics: filters.metrics ?? [],
+    metrics_secondary: filters.metrics_secondary ?? [],
+    exposure_criteria: filters.exposure_criteria ?? null,
     primary_saved_metric_keys: (spec.primarySavedMetrics ?? []).map((m) => m.key),
     secondary_saved_metric_keys: (spec.secondarySavedMetrics ?? []).map((m) => m.key),
     conclusion: spec.conclusion ?? null,
@@ -151,6 +208,7 @@ const FLAG_CONFIG_PARAMETER_KEYS: readonly string[] = [
 export function buildCreatePayload(spec: Experiment, hash: string, ctx: ApplyContext): ExperimentCreate {
   const holdoutId = resolveHoldoutId(spec, ctx);
   const savedMetrics = resolveSavedMetricIds(spec, ctx);
+  const filters = resolveCohortRefs(spec, ctx);
   const payload: ExperimentCreate = {
     name: spec.name,
     description: withMarker(spec.description, spec.key, hash),
@@ -162,9 +220,9 @@ export function buildCreatePayload(spec: Experiment, hash: string, ctx: ApplyCon
     Object.entries(spec.parameters ?? {}).filter(([key]) => !FLAG_CONFIG_PARAMETER_KEYS.includes(key)),
   );
   if (Object.keys(parameters).length > 0) payload.parameters = parameters;
-  if (spec.metrics !== undefined) payload.metrics = spec.metrics;
-  if (spec.metrics_secondary !== undefined) payload.metrics_secondary = spec.metrics_secondary;
-  if (spec.exposure_criteria !== undefined) payload.exposure_criteria = spec.exposure_criteria;
+  if (filters.metrics !== undefined) payload.metrics = filters.metrics;
+  if (filters.metrics_secondary !== undefined) payload.metrics_secondary = filters.metrics_secondary;
+  if (filters.exposure_criteria !== undefined) payload.exposure_criteria = filters.exposure_criteria;
   if (holdoutId !== undefined) payload.holdout_id = holdoutId;
   if (savedMetrics.length > 0) payload.saved_metrics_ids = savedMetrics;
   if (spec.conclusion !== undefined) payload.conclusion = spec.conclusion;
@@ -181,15 +239,16 @@ export function buildCreatePayload(spec: Experiment, hash: string, ctx: ApplyCon
 function buildUpdatePayload(spec: Experiment, hash: string, ctx: ApplyContext): ExperimentUpdate {
   const holdoutId = resolveHoldoutId(spec, ctx);
   const savedMetrics = resolveSavedMetricIds(spec, ctx);
+  const filters = resolveCohortRefs(spec, ctx);
   const payload: ExperimentUpdate = {
     name: spec.name,
     description: withMarker(spec.description, spec.key, hash),
   };
   if (spec.type !== undefined) payload.type = spec.type;
   if (spec.parameters !== undefined) payload.parameters = spec.parameters as Record<string, unknown>;
-  if (spec.metrics !== undefined) payload.metrics = spec.metrics;
-  if (spec.metrics_secondary !== undefined) payload.metrics_secondary = spec.metrics_secondary;
-  if (spec.exposure_criteria !== undefined) payload.exposure_criteria = spec.exposure_criteria;
+  if (filters.metrics !== undefined) payload.metrics = filters.metrics;
+  if (filters.metrics_secondary !== undefined) payload.metrics_secondary = filters.metrics_secondary;
+  if (filters.exposure_criteria !== undefined) payload.exposure_criteria = filters.exposure_criteria;
   if (holdoutId !== undefined) payload.holdout_id = holdoutId;
   payload.saved_metrics_ids = savedMetrics;
   if (spec.conclusion !== undefined) payload.conclusion = spec.conclusion;
@@ -236,6 +295,11 @@ export function validateExperiments(
     const m = loaded.spec as ExperimentSavedMetric;
     if (m?.key) knownSavedMetricKeys.add(m.key);
   }
+  const knownCohortKeys = new Set<string>();
+  for (const loaded of state.get("cohorts") ?? []) {
+    const c = loaded.spec as Cohort;
+    if (c?.key) knownCohortKeys.add(c.key);
+  }
 
   for (const spec of specs) {
     if (!spec.key) {
@@ -279,6 +343,17 @@ export function validateExperiments(
       if (!knownSavedMetricKeys.has(m.key)) {
         issues.push(
           `experiment "${spec.key}" references unknown experiment saved metric "${m.key}"`,
+        );
+      }
+    }
+    for (const value of specCohortFilterValues(spec)) {
+      if (!isCohortSpec(value)) {
+        issues.push(
+          `experiment "${spec.key}" filters on cohort ${JSON.stringify(value)} by id, which differs between projects — use the cohort's spec as the value`,
+        );
+      } else if (!knownCohortKeys.has(value.key)) {
+        issues.push(
+          `experiment "${spec.key}" references unknown cohort "${value.key}" — declare it with cohort({ key: "${value.key}", … })`,
         );
       }
     }
@@ -448,6 +523,7 @@ export async function pruneExperiment(
 }
 
 export function displayExperiment(spec: Experiment): DisplayValue {
+  const filters = filtersByCohortKey(spec);
   return obj([
     ["key", scalar(spec.key)],
     ["name", scalar(spec.name)],
@@ -458,9 +534,9 @@ export function displayExperiment(spec: Experiment): DisplayValue {
     ["feature_flag", scalar(spec.featureFlag.key)],
     ["holdout", scalar(spec.holdout?.key ?? null)],
     ["parameters", displayJson(spec.parameters ?? null)],
-    ["metrics", arr((spec.metrics ?? []).map(displayJson))],
-    ["metrics_secondary", arr((spec.metrics_secondary ?? []).map(displayJson))],
-    ["exposure_criteria", displayJson(spec.exposure_criteria ?? null)],
+    ["metrics", arr((filters.metrics ?? []).map(displayJson))],
+    ["metrics_secondary", arr((filters.metrics_secondary ?? []).map(displayJson))],
+    ["exposure_criteria", displayJson(filters.exposure_criteria ?? null)],
     [
       "primary_saved_metrics",
       arr((spec.primarySavedMetrics ?? []).map((m) => scalar(m.key))),
@@ -474,7 +550,17 @@ export function displayExperiment(spec: Experiment): DisplayValue {
   ]);
 }
 
-export function displayExperimentFromServer(server: ServerExperiment): DisplayValue {
+/** Server bodies with known cohort ids shown as keys, matching how the spec side displays them. */
+function serverByCohortKey(value: unknown, ctx?: ApplyContext): unknown {
+  if (!ctx || ctx.cohortKeyByServerId.size === 0) return value;
+  return mapCohortFilters(value, (filterValue) => {
+    if (typeof filterValue !== "number") return filterValue;
+    const key = ctx.cohortKeyByServerId.get(filterValue);
+    return key ? { cohort: key } : filterValue;
+  });
+}
+
+export function displayExperimentFromServer(server: ServerExperiment, ctx?: ApplyContext): DisplayValue {
   return obj([
     ["key", scalar(experimentKeyFromServer(server) ?? null)],
     ["name", scalar(server.name)],
@@ -485,9 +571,12 @@ export function displayExperimentFromServer(server: ServerExperiment): DisplayVa
     ["feature_flag", scalar(server.feature_flag_key)],
     ["holdout", scalar(server.holdout_id ?? null)],
     ["parameters", displayJson(server.parameters ?? null)],
-    ["metrics", arr((server.metrics ?? []).map((m) => displayJson(m)))],
-    ["metrics_secondary", arr((server.metrics_secondary ?? []).map((m) => displayJson(m)))],
-    ["exposure_criteria", displayJson(server.exposure_criteria ?? null)],
+    ["metrics", arr((server.metrics ?? []).map((m) => displayJson(serverByCohortKey(m, ctx))))],
+    [
+      "metrics_secondary",
+      arr((server.metrics_secondary ?? []).map((m) => displayJson(serverByCohortKey(m, ctx)))),
+    ],
+    ["exposure_criteria", displayJson(serverByCohortKey(server.exposure_criteria ?? null, ctx))],
     [
       "saved_metrics",
       arr((server.saved_metrics ?? []).map((m) => displayJson(m))),
