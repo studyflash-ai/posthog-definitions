@@ -17,6 +17,8 @@ import {
   type ResourceOp,
 } from "../types.js";
 import type { Insight } from "../insight/sdk.js";
+import { getInsight, setInsightDashboards, type ServerInsight } from "../insight/client.js";
+import { insightKeyFromTags } from "../insight/pipeline.js";
 import {
   type ButtonTile,
   type Dashboard,
@@ -111,56 +113,33 @@ function layoutsFor(layout: Layout): Record<string, Layout> {
   return { sm: layout, lg: layout };
 }
 
-function serializeInsightTile(tile: InsightTile, insightIdByKey: Map<string, number>): unknown {
+function insightIdFor(tile: InsightTile, insightIdByKey: Map<string, number>): number {
   const id = insightIdByKey.get(tile.insight.key);
   if (id === undefined) {
     throw new Error(
       `Insight "${tile.insight.key}" was not created before its dashboard tile. This is a bug in the executor ordering.`,
     );
   }
-  return {
-    insight: { id },
-    layouts: layoutsFor(tile.layout),
-    ...(tile.color !== undefined && { color: tile.color }),
-    ...(tile.filtersOverride !== undefined && {
-      filters_hash: null,
-      filters: tile.filtersOverride,
-    }),
-  };
+  return id;
 }
 
-function serializeTextTile(tile: TextTile): unknown {
-  return {
-    text: { body: tile.body },
-    layouts: layoutsFor(tile.layout),
-  };
+function tileBody(tile: TextTile | ButtonTile): string {
+  return isTextTile(tile) ? tile.body : `[${tile.text}](${tile.url})`;
 }
 
-function serializeButtonTile(tile: ButtonTile): unknown {
-  return {
-    text: { body: `[${tile.text}](${tile.url})` },
-    layouts: layoutsFor(tile.layout),
-  };
-}
-
-function serializeTile(tile: Tile, insightIdByKey: Map<string, number>): unknown {
-  if (isInsightTile(tile)) return serializeInsightTile(tile, insightIdByKey);
-  if (isTextTile(tile)) return serializeTextTile(tile);
-  if (isButtonTile(tile)) return serializeButtonTile(tile);
-  throw new Error(`Unknown tile shape: ${JSON.stringify(tile)}`);
+function liveTiles(server: ServerDashboard): ServerTile[] {
+  return (server.tiles ?? []).filter((t) => !t.deleted);
 }
 
 export function dashboardPayload(
   spec: Dashboard,
   hash: string,
-  insightIdByKey: Map<string, number>,
 ): {
   name: string;
   description: string | null;
   pinned: boolean;
   tags: string[];
   restriction_level?: number;
-  tiles: unknown[];
 } {
   return {
     name: spec.name,
@@ -170,8 +149,94 @@ export function dashboardPayload(
     ...(spec.restriction !== undefined && {
       restriction_level: RESTRICTION_TO_LEVEL[spec.restriction],
     }),
-    tiles: spec.tiles.map((tile) => serializeTile(tile, insightIdByKey)),
   };
+}
+
+/**
+ * PostHog ignores `tiles` on a dashboard POST, and a dashboard PATCH only edits tiles it
+ * gets by id (or creates text tiles). An insight tile exists only once the insight's
+ * `dashboards` list holds the dashboard. So: link the missing insights, then set every
+ * tile's layout by id, create missing text tiles, and delete tiles the spec dropped.
+ */
+async function syncTiles(
+  config: ClientConfig,
+  dashboardId: number,
+  spec: Dashboard,
+  insightIdByKey: Map<string, number>,
+  options: { verbose?: boolean },
+): Promise<void> {
+  const before = liveTiles(await getDashboard(config, dashboardId, options));
+  const linked = new Set(before.flatMap((t) => (t.insight ? [t.insight.id] : [])));
+  for (const tile of spec.tiles) {
+    if (!isInsightTile(tile)) continue;
+    const id = insightIdFor(tile, insightIdByKey);
+    if (linked.has(id)) continue;
+    const insight = await getInsight(config, id, options);
+    await setInsightDashboards(
+      config,
+      id,
+      [...new Set([...(insight.dashboards ?? []), dashboardId])],
+      options,
+    );
+    linked.add(id);
+  }
+
+  const current = liveTiles(await getDashboard(config, dashboardId, options));
+  const unclaimed = new Set(current);
+  const claim = (match: (t: ServerTile) => boolean): ServerTile | undefined => {
+    const found = current.find((t) => unclaimed.has(t) && match(t));
+    if (found) unclaimed.delete(found);
+    return found;
+  };
+  const tiles: unknown[] = [];
+  for (const tile of spec.tiles) {
+    if (isInsightTile(tile)) {
+      const id = insightIdFor(tile, insightIdByKey);
+      const server = claim((t) => t.insight?.id === id);
+      if (!server) {
+        throw new Error(
+          `Insight "${tile.insight.key}" has no tile on dashboard ${dashboardId} after linking it.`,
+        );
+      }
+      tiles.push({
+        id: server.id,
+        layouts: layoutsFor(tile.layout),
+        ...(tile.color !== undefined && { color: tile.color }),
+        ...(tile.filtersOverride !== undefined && { filters_overrides: tile.filtersOverride }),
+      });
+      continue;
+    }
+    const body = tileBody(tile);
+    const server = claim((t) => t.text?.body === body);
+    tiles.push(
+      server
+        ? { id: server.id, layouts: layoutsFor(tile.layout) }
+        : { text: { body }, layouts: layoutsFor(tile.layout) },
+    );
+  }
+  for (const t of unclaimed) tiles.push({ id: t.id, deleted: true });
+  await updateDashboard(config, dashboardId, { tiles }, options);
+}
+
+/** The hash covers the spec, not the server: a dashboard whose tiles never landed still matches it. */
+export function dashboardTilesStale(
+  spec: Dashboard,
+  server: ServerDashboard,
+  insights: readonly unknown[],
+): boolean {
+  if (server.tiles === undefined) return false;
+  const insightIdByKey = new Map<string, number>();
+  for (const insight of insights.filter(isInsightRow)) {
+    const key = insightKeyFromTags(insight.tags);
+    if (key) insightIdByKey.set(key, insight.id);
+  }
+  const want = spec.tiles
+    .map((t) => (isInsightTile(t) ? `i:${insightIdByKey.get(t.insight.key)}` : `t:${tileBody(t)}`))
+    .sort();
+  const have = liveTiles(server)
+    .map((t) => (t.insight ? `i:${t.insight.id}` : `t:${t.text?.body}`))
+    .sort();
+  return want.length !== have.length || want.some((w, i) => w !== have[i]);
 }
 
 export function looksLikeDashboard(value: unknown): value is Dashboard {
@@ -275,15 +340,17 @@ export async function runDashboardOp(
 ): Promise<void> {
   if (op.kind === "unchanged") return;
 
-  const payload = dashboardPayload(op.spec, dashboardHash(op.spec), ctx.insightIdByKey);
+  const payload = dashboardPayload(op.spec, dashboardHash(op.spec));
 
+  let dashboardId: number;
   if (op.kind === "create") {
-    await createDashboard(config, payload, options);
-    return;
+    dashboardId = (await createDashboard(config, payload, options)).id;
+  } else {
+    await assertManagedDashboard(config, op.server.id, op.spec.key, options);
+    await updateDashboard(config, op.server.id, payload, options);
+    dashboardId = op.server.id;
   }
-
-  await assertManagedDashboard(config, op.server.id, op.spec.key, options);
-  await updateDashboard(config, op.server.id, payload, options);
+  await syncTiles(config, dashboardId, op.spec, ctx.insightIdByKey, options);
 }
 
 export async function pruneDashboard(
@@ -405,4 +472,10 @@ export function displayDashboardFromServer(
     ["tags", arr(filterUserTags(server.tags).map(scalar))],
     ["tiles", arr((server.tiles ?? []).map((t) => displayServerTile(t, insightKeyByServerId)))],
   ]);
+}
+
+function isInsightRow(row: unknown): row is Pick<ServerInsight, "id" | "tags"> {
+  if (typeof row !== "object" || row === null) return false;
+  if (!("id" in row) || typeof row.id !== "number") return false;
+  return "tags" in row && Array.isArray(row.tags) && row.tags.every((t) => typeof t === "string");
 }

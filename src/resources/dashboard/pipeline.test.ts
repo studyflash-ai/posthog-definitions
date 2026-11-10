@@ -5,6 +5,7 @@ import { type Dashboard } from "./sdk.js";
 import { type ServerDashboard } from "./client.js";
 import { dashboardHash } from "./pipeline.js";
 import type { Insight, TrendsQuery } from "../insight/sdk.js";
+import type { ServerInsight } from "../insight/client.js";
 
 function trends(event: string): TrendsQuery {
   return { kind: "TrendsQuery", series: [{ event }] };
@@ -27,14 +28,20 @@ function spec(key: string, insightKey: string): Dashboard {
   };
 }
 
-function serverRow(id: number, key: string, hash: string, extra: string[] = []): ServerDashboard {
+function serverRow(
+  id: number,
+  key: string,
+  hash: string,
+  extra: string[] = [],
+  tiles: ServerDashboard["tiles"] = [],
+): ServerDashboard {
   return {
     id,
     name: `Dashboard ${key}`,
     description: null,
     pinned: false,
     tags: [`iac:dashboards:${key}`, `iac:hash:${hash}`, ...extra],
-    tiles: [],
+    tiles,
   };
 }
 
@@ -48,9 +55,16 @@ function desiredFor(dashboards: Dashboard[]): DesiredState {
   return state;
 }
 
+const weeklySignups: ServerInsight = {
+  id: 11,
+  short_id: "abc",
+  name: "weekly-signups",
+  tags: ["iac:insights:weekly-signups"],
+};
+
 function currentFor(rows: ServerDashboard[]): Map<string, unknown[]> {
   return new Map<string, unknown[]>([
-    ["insights", []],
+    ["insights", [weeklySignups]],
     ["dashboards", rows],
   ]);
 }
@@ -65,9 +79,22 @@ describe("dashboard pipeline", () => {
 
   it("emits unchanged when server hash matches", () => {
     const desired = spec("growth", "weekly-signups");
-    const server = serverRow(7, "growth", dashboardHash(desired));
+    const server = serverRow(
+      7,
+      "growth",
+      dashboardHash(desired),
+      [],
+      [{ id: 1, insight: { id: weeklySignups.id } }],
+    );
     const result = diff(desiredFor([desired]), currentFor([server]));
     expect(result.get("dashboards")!.ops[0]!.kind).toBe("unchanged");
+  });
+
+  it("emits update when the hash matches but the insight tile is missing", () => {
+    const desired = spec("growth", "weekly-signups");
+    const server = serverRow(7, "growth", dashboardHash(desired));
+    const result = diff(desiredFor([desired]), currentFor([server]));
+    expect(result.get("dashboards")!.ops[0]!.kind).toBe("update");
   });
 
   it("emits update when server hash drifted", () => {

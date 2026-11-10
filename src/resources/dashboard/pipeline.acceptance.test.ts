@@ -104,6 +104,7 @@ describe("dashboard pipeline (acceptance)", () => {
       registerCleanup(async () => {
         await deleteDashboard(config, dashboardId);
       });
+      expect((listed.tiles ?? []).map((t) => t.insight?.id)).toEqual([insightId]);
 
       const inline = extractInlineInsights(initial);
       expect(inline.length).toBe(1);
@@ -121,12 +122,13 @@ describe("dashboard pipeline (acceptance)", () => {
       const afterUpdate = await getDashboard(config, dashboardId);
       expect(afterUpdate.name).toBe("Acceptance dashboard v2");
       expect(dashboardHashFromTags(afterUpdate.tags)).toBe(dashboardHash(updated));
+      expect((afterUpdate.tiles ?? []).map((t) => t.insight?.id)).toEqual([insightId]);
 
       const managedAgain = await listManagedDashboards(config);
       const result = diff(
         desiredFor([insightSpec], [updated]),
         new Map<string, unknown[]>([
-          ["insights", []],
+          ["insights", await listManagedInsights(config)],
           ["dashboards", managedAgain],
         ]),
       );

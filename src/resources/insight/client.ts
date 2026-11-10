@@ -9,6 +9,7 @@ export type ServerInsight = {
   description?: string | null;
   query?: unknown;
   tags: string[];
+  dashboards?: number[];
 };
 
 export type InsightCreate = {
@@ -36,6 +37,7 @@ function toServerInsight(raw: GeneratedInsight): ServerInsight {
     description: raw.description ?? null,
     query: raw.query ?? undefined,
     tags: (raw.tags ?? []).filter((t): t is string => typeof t === "string"),
+    dashboards: raw.dashboards ?? [],
   };
 }
 
@@ -126,6 +128,24 @@ export async function updateInsight(
     },
   });
   return toServerInsight(data!);
+}
+
+/**
+ * Set the dashboards an insight sits on. This is the only API path that creates
+ * an insight tile: the dashboard endpoints ignore insight tiles without a tile id.
+ * The list replaces the insight's dashboards, so pass the ones it keeps too.
+ */
+export async function setInsightDashboards(
+  config: ClientConfig,
+  id: number,
+  dashboards: number[],
+  options: { verbose?: boolean } = {},
+): Promise<void> {
+  const api = createApiClient(config, { verbose: options.verbose });
+  await api.PATCH("/api/projects/{project_id}/insights/{id}/", {
+    params: { path: { project_id: config.projectId, id } },
+    body: { dashboards },
+  });
 }
 
 export async function deleteInsight(

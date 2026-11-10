@@ -6,6 +6,7 @@ import {
   dashboardHash,
   dashboardHashFromTags,
   dashboardKeyFromTags,
+  dashboardTilesStale,
   displayDashboard,
   displayDashboardFromServer,
   extractInlineInsights,
@@ -43,6 +44,8 @@ export const dashboardResource: CollectionResourceModule<Dashboard, ServerDashbo
   hashFromServer: (server) => dashboardHashFromTags(server.tags),
 
   hash: dashboardHash,
+  isStale: (spec, server, current) =>
+    dashboardTilesStale(spec, server, current.get(insightResource.name) ?? []),
   validate: (specs, state) => validateDashboards(specs, state),
   executeOp: runDashboardOp,
   prune: pruneDashboard,
