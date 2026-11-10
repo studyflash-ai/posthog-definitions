@@ -4,6 +4,7 @@ import { createApiClient, followPagination, type Paginated } from "../../client/
 
 export type ServerTile = {
   id?: number;
+  deleted?: boolean | null;
   insight?: { id: number; short_id?: string } | null;
   text?: { body: string } | null;
   layouts?: Record<string, { x: number; y: number; w: number; h: number }>;
@@ -96,7 +97,9 @@ export async function listManagedDashboards(
   options: { verbose?: boolean } = {},
 ): Promise<ServerDashboard[]> {
   const all = await listDashboards(config, options);
-  return all.filter((d) => d.tags.some((tag) => tag.startsWith("iac:dashboards:")));
+  const managed = all.filter((d) => d.tags.some((tag) => tag.startsWith("iac:dashboards:")));
+  // The list response has no tiles; fetch each managed dashboard so diff can see them.
+  return Promise.all(managed.map((d) => getDashboard(config, d.id, options)));
 }
 
 export async function getDashboard(
