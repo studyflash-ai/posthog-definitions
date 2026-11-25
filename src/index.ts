@@ -40,6 +40,21 @@ export type {
   BatchExportModel,
 } from "./resources/batch-export/index.js";
 
+export { externalDataSource } from "./resources/external-data-source/index.js";
+export type {
+  ExternalDataSource,
+  ExternalDataSchema,
+  ExternalDataSchemaSyncFrequency,
+  ExternalDataSchemaSyncType,
+} from "./resources/external-data-source/index.js";
+
+export { eltDestination } from "./resources/elt-destination/index.js";
+export type {
+  EltDestination,
+  EltDestinationTable,
+  EltDestinationType,
+} from "./resources/elt-destination/index.js";
+
 export { featureFlag } from "./resources/feature-flag/index.js";
 export type {
   FeatureFlag,

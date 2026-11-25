@@ -104,6 +104,39 @@ export async function followPagination<T>(
   return all;
 }
 
+/**
+ * One JSON request through the same retried fetch and `ApiError` contract as
+ * the typed client, for endpoints the generated OpenAPI types don't cover yet.
+ * `path` is relative to the host, e.g. `/api/projects/1/external_data_sources/`.
+ */
+export async function requestJson(
+  config: ClientConfig,
+  method: "GET" | "POST" | "PATCH" | "DELETE",
+  path: string,
+  body?: unknown,
+  options: ApiClientOptions = {},
+): Promise<unknown> {
+  const response = await makeRetriedFetch({ verbose: options.verbose })(`${config.host}${path}`, {
+    method,
+    headers: {
+      ...requestHeaders(config),
+      ...(body !== undefined ? { "Content-Type": "application/json" } : {}),
+    },
+    ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+  });
+  const text = await response.text();
+  if (!response.ok) {
+    throw new ApiError(
+      response.status,
+      method,
+      response.url,
+      text,
+      parseRetryAfterMs(response.headers.get("Retry-After")),
+    );
+  }
+  return text ? JSON.parse(text) : undefined;
+}
+
 // ---------------------------------------------------------------------------
 // retried fetch — preserves the retry/timeout/Retry-After semantics from
 // the legacy http.ts so callers see the same behavior under load.
