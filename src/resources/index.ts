@@ -2,6 +2,8 @@ import type { ResourceModule } from "./types.js";
 import { topoOrder } from "./order.js";
 import { actionResource } from "./action/index.js";
 import { batchExportResource } from "./batch-export/index.js";
+import { eltDestinationResource } from "./elt-destination/index.js";
+import { externalDataSourceResource } from "./external-data-source/index.js";
 import { cohortResource } from "./cohort/index.js";
 import { dashboardResource } from "./dashboard/index.js";
 import { endpointResource } from "./endpoint/index.js";
@@ -24,11 +26,13 @@ const REGISTRY: ReadonlyArray<ResourceModule<unknown, unknown>> = [
   batchExportResource as ResourceModule<unknown, unknown>,
   cohortResource as ResourceModule<unknown, unknown>,
   dashboardResource as ResourceModule<unknown, unknown>,
+  eltDestinationResource as ResourceModule<unknown, unknown>,
   endpointResource as ResourceModule<unknown, unknown>,
   eventDefinitionResource as ResourceModule<unknown, unknown>,
   experimentResource as ResourceModule<unknown, unknown>,
   experimentHoldoutResource as ResourceModule<unknown, unknown>,
   experimentSavedMetricResource as ResourceModule<unknown, unknown>,
+  externalDataSourceResource as ResourceModule<unknown, unknown>,
   featureFlagResource as ResourceModule<unknown, unknown>,
   insightResource as ResourceModule<unknown, unknown>,
   projectSettingsResource as ResourceModule<unknown, unknown>,
@@ -47,6 +51,8 @@ export { insightResource } from "./insight/index.js";
 export { dashboardResource } from "./dashboard/index.js";
 export { actionResource } from "./action/index.js";
 export { batchExportResource } from "./batch-export/index.js";
+export { eltDestinationResource } from "./elt-destination/index.js";
+export { externalDataSourceResource } from "./external-data-source/index.js";
 export { cohortResource } from "./cohort/index.js";
 export { featureFlagResource } from "./feature-flag/index.js";
 export { endpointResource } from "./endpoint/index.js";

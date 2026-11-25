@@ -79,6 +79,8 @@ export type ApplyContext = {
   cohortIdByKey: Map<string, number>;
   /** Inverse of cohortIdByKey; populated when displaying server-side flag filters so we can show keys rather than ids. */
   cohortKeyByServerId: Map<number, string>;
+  /** External data source server id by spec key. Populated by the external-data-source module's executor; read by the elt-destination module to find the tables it links. */
+  externalDataSourceIdByKey: Map<string, string>;
 };
 
 export function newApplyContext(): ApplyContext {
@@ -90,6 +92,7 @@ export function newApplyContext(): ApplyContext {
     experimentSavedMetricIdByKey: new Map(),
     cohortIdByKey: new Map(),
     cohortKeyByServerId: new Map(),
+    externalDataSourceIdByKey: new Map(),
   };
 }
 
@@ -161,6 +164,16 @@ export interface CollectionResourceModule<TSpec = unknown, TServer = unknown>
   hashFromServer(server: TServer): string | undefined;
 
   hash(spec: TSpec): string;
+
+  /**
+   * Optional: adopt a row that carries no identity marker yet. A resource whose
+   * server rows have a natural key (unique per project, like a warehouse
+   * source's type and prefix) returns it from both hooks; a declared spec with
+   * no managed row then updates the unmanaged row with the same natural key,
+   * which stamps the marker on it, instead of creating a second one.
+   */
+  adoptionKey?(spec: TSpec): string;
+  adoptionKeyFromServer?(server: TServer): string | undefined;
 
   /**
    * Optional: whether a row whose stored hash matches still needs an update,

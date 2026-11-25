@@ -9,11 +9,13 @@ import { actionResource } from "./action/index.js";
 import { batchExportResource } from "./batch-export/index.js";
 import { cohortResource } from "./cohort/index.js";
 import { dashboardResource } from "./dashboard/index.js";
+import { eltDestinationResource } from "./elt-destination/index.js";
 import { endpointResource } from "./endpoint/index.js";
 import { eventDefinitionResource } from "./event-definition/index.js";
 import { experimentResource } from "./experiment/index.js";
 import { experimentHoldoutResource } from "./experiment-holdout/index.js";
 import { experimentSavedMetricResource } from "./experiment-saved-metric/index.js";
+import { externalDataSourceResource } from "./external-data-source/index.js";
 import { featureFlagResource } from "./feature-flag/index.js";
 import { insightResource } from "./insight/index.js";
 import { projectSettingsResource } from "./project-settings/index.js";
@@ -188,11 +190,13 @@ describe("RESOURCES (real registry)", () => {
         batchExportResource,
         cohortResource,
         dashboardResource,
+        eltDestinationResource,
         endpointResource,
         eventDefinitionResource,
         experimentResource,
         experimentHoldoutResource,
         experimentSavedMetricResource,
+        externalDataSourceResource,
         featureFlagResource,
         insightResource,
         projectSettingsResource,

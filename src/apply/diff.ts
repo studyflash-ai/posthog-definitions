@@ -43,9 +43,18 @@ function diffCollection(
     currentByKey.set(key, row);
   }
 
+  const adoptable = new Map<string, unknown>();
+  if (resource.adoptionKey && resource.adoptionKeyFromServer) {
+    for (const row of serverRows) {
+      if (resource.keyFromServer(row) !== undefined) continue;
+      const adoptionKey = resource.adoptionKeyFromServer(row);
+      if (adoptionKey !== undefined) adoptable.set(adoptionKey, row);
+    }
+  }
+
   for (const spec of desiredSpecs) {
     const key = resource.specKey(spec);
-    const server = currentByKey.get(key);
+    const server = currentByKey.get(key) ?? adoptable.get(resource.adoptionKey?.(spec) ?? "");
     if (!server) {
       ops.push({ kind: "create", spec });
     } else if (
